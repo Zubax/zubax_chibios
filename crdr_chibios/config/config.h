@@ -58,6 +58,7 @@ void configRegisterParam_(const ConfigParam* param);
 
 /**
  * Returns 0 if everything is OK, even if the configuration could not be restored (this is not an error).
+ * All other interface functions except @ref configGet() assume that the config module was initialized successfully.
  * Returns negative errno in case of unrecoverable fault.
  */
 int configInit(void);
@@ -95,6 +96,8 @@ int configSet(const char* name, float value);
 int configGetDescr(const char* name, ConfigParam* out);
 
 /**
+ * This function can be called even if the config module was not initialized yet,
+ * i.e. before @ref configInit() was called.
  * @param [in] name Parameter name
  * @return The parameter value if it does exist; otherwise fires an assert() in debug builds, returns NAN in release.
  */

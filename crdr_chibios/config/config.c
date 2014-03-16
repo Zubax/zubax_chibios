@@ -190,6 +190,7 @@ int configInit(void)
 
 int configSave(void)
 {
+    ASSERT_ALWAYS(_frozen);
     chMtxLock(&_mutex);
 
     // Erase
@@ -225,6 +226,7 @@ int configSave(void)
 
 int configErase(void)
 {
+    ASSERT_ALWAYS(_frozen);
     chMtxLock(&_mutex);
     int res = configStorageErase();
     chMtxUnlock();
@@ -242,6 +244,7 @@ const char* configNameByIndex(int index)
 int configSet(const char* name, float value)
 {
     int retval = 0;
+    ASSERT_ALWAYS(_frozen);
     chMtxLock(&_mutex);
 
     const int index = indexByName(name);
@@ -264,6 +267,7 @@ int configSet(const char* name, float value)
 
 int configGetDescr(const char* name, ConfigParam* out)
 {
+    ASSERT_ALWAYS(_frozen);
     assert(out);
     if (!out)
         return -EINVAL;
