@@ -46,7 +46,9 @@ INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHIBIOS)/os/various
 # Build configuration
 #
 
-USE_OPT += -falign-functions=16 -std=c99 -U__STRICT_ANSI__
+NO_BUILTIN += -fno-builtin-printf -fno-builtin-fprintf  -fno-builtin-vprintf -fno-builtin-vfprintf
+
+USE_OPT += -falign-functions=16 -std=c99 -U__STRICT_ANSI__ $(NO_BUILTIN)
 USE_COPT +=
 USE_CPPOPT += -std=c++0x -fno-rtti
 
