@@ -1,13 +1,26 @@
-# Compiled Object files
-*.slo
-*.lo
+# Build outputs
 *.o
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-
-# Compiled Static libraries
-*.lai
-*.la
+*.elf
+*.bin
+*.hex
+lib*.so
+lib*.so.*
 *.a
+*.d
+.dep
+build
+.gdbinit
+*.swp
+*~
+*.pyc
+__pycache__
+
+# Eclipse
+.metadata/*
+.settings/*
+.project
+.cproject
+.pydevproject
+
+# 3rdparty
+chibios
