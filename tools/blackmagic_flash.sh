@@ -11,7 +11,7 @@ PORT=${1:-'/dev/ttyACM0'}
 # Find the firmware ELF
 elf=$(ls -1 ../../build/*.elf)
 if [ -z "$elf" ]; then
-    elf=$(ls -1 *.elf)
+    elf=$(ls -1 build/*.elf)
 fi
 if [ -z "$elf" ]; then
     echo "No firmware found"
