@@ -102,7 +102,7 @@ static int indexByName(const char* name)
     return -1;
 }
 
-void configRegisterParam(const ConfigParam* param)
+void configRegisterParam_(const ConfigParam* param)
 {
     // This function can not be executed after the startup initialization is finished
     assert(!_frozen);

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,7 +39,7 @@ typedef struct
         {name, default_, min, max, type};                             \
     __attribute__((constructor))                                      \
     static void GLUE(_config_local_constructor_, __LINE__)(void) {    \
-        configRegisterParam(&GLUE(_config_local_param_, __LINE__));   \
+        configRegisterParam_(&GLUE(_config_local_param_, __LINE__));   \
     }
 
 /**
