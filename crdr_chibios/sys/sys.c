@@ -67,6 +67,15 @@ int printf(const char* format, ...)
     return strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
 }
 
+int puts(const char* str)
+{
+    const int len = strlen(str);
+    if (len)
+        sdWrite(&STDOUT_SD, (uint8_t*)str, len); // this fires an assert() if len = 0, haha!
+    sdWrite(&STDOUT_SD, (uint8_t*)"\n", 1);
+    return len + 1;
+}
+
 void _exit(int status)
 {
     (void) status;
