@@ -235,6 +235,7 @@ int configErase(void)
 
 const char* configNameByIndex(int index)
 {
+    ASSERT_ALWAYS(_frozen);
     assert(index >= 0);
     if (index < 0 || index >= _num_params)
         return NULL;
@@ -290,6 +291,7 @@ int configGetDescr(const char* name, ConfigParam* out)
 
 float configGet(const char* name)
 {
+    ASSERT_ALWAYS(_frozen);
     chMtxLock(&_mutex);
     const int index = indexByName(name);
     assert(index >= 0);
