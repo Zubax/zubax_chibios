@@ -9,9 +9,13 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <crdr_chibios/config/cli.h>
-#include <crdr_chibios/config/config.h>
+#include <crdr_chibios/config/cli.hpp>
+#include <crdr_chibios/config/config.hpp>
 
+namespace crdr_chibios
+{
+namespace config
+{
 
 static int printParam(const char* name, bool verbose)
 {
@@ -50,7 +54,7 @@ static int printParam(const char* name, bool verbose)
     return 0;
 }
 
-int configExecuteCliCommand(int argc, char *argv[])
+int executeCliCommand(int argc, char *argv[])
 {
     const char* const command = (argc < 1) ? "" : argv[0];
 
@@ -108,4 +112,7 @@ int configExecuteCliCommand(int argc, char *argv[])
             "  cfg set <name> <value>");
     }
     return -EINVAL;
+}
+
+}
 }

@@ -18,7 +18,9 @@ extern "C" {
 
 /**
  * NuttX-like console print; should be used instead of printf()/chprintf()
+ * TODO: use type safe version for C++.
  */
+__attribute__ ((format (printf, 1, 2)))
 void lowsyslog(const char* format, ...);
 
 /**

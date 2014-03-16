@@ -6,15 +6,15 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace crdr_chibios
+{
+namespace config
+{
 
 /**
  * Allows to read/modify/save/restore commands via CLI
  */
-int configExecuteCliCommand(int argc, char *argv[]);
+int executeCliCommand(int argc, char *argv[]);
 
-#ifdef __cplusplus
 }
-#endif
+}
