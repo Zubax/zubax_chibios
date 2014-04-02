@@ -13,6 +13,9 @@
 #include <chprintf.h>
 #include "sys.h"
 
+__attribute__((weak))
+void *__dso_handle;
+
 #if !CH_DBG_ENABLED
 const char *dbg_panic_msg;
 #endif
