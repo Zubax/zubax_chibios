@@ -79,6 +79,7 @@ LD   = $(TOOLCHAIN_PREFIX)-g++
 CP   = $(TOOLCHAIN_PREFIX)-objcopy
 AS   = $(TOOLCHAIN_PREFIX)-gcc -x assembler-with-cpp
 OD   = $(TOOLCHAIN_PREFIX)-objdump
+SZ   = $(TOOLCHAIN_PREFIX)-size
 HEX  = $(CP) -O ihex
 BIN  = $(CP) -O binary
 
