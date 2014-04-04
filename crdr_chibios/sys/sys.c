@@ -70,6 +70,12 @@ int printf(const char* format, ...)
     return strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
 }
 
+int vprintf(const char* format, va_list vl)
+{
+    chvprintf((BaseSequentialStream*)&(STDOUT_SD), format, vl);
+    return strlen(format);
+}
+
 int puts(const char* str)
 {
     const int len = strlen(str);
