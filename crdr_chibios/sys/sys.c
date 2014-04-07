@@ -36,6 +36,13 @@ void sysHaltHook_(void)
     if (dbg_panic_msg != NULL)
         sysEmergencyPrint(dbg_panic_msg);
     sysEmergencyPrint("\n");
+
+#if DEBUG
+    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    {
+        __asm volatile ("bkpt #0\n"); // Break into the debugger
+    }
+#endif
 }
 
 __attribute__((weak))
