@@ -51,7 +51,7 @@ INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(CHIBIOS)/
 
 NO_BUILTIN += -fno-builtin-printf -fno-builtin-fprintf  -fno-builtin-vprintf -fno-builtin-vfprintf -fno-builtin-puts
 
-USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ $(NO_BUILTIN)
+USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions $(NO_BUILTIN)
 USE_COPT += -std=c99
 USE_CPPOPT += -std=c++11 -fno-rtti -fno-exceptions
 
