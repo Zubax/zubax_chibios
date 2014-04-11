@@ -30,11 +30,15 @@ void sysHaltHook_(void)
     sysEmergencyPrint("\nPANIC [");
     const Thread *pthread = chThdSelf();
     if (pthread && pthread->p_name)
+    {
         sysEmergencyPrint(pthread->p_name);
+    }
     sysEmergencyPrint("] ");
 
     if (dbg_panic_msg != NULL)
+    {
         sysEmergencyPrint(dbg_panic_msg);
+    }
     sysEmergencyPrint("\n");
 
 #if DEBUG
@@ -48,12 +52,74 @@ void sysHaltHook_(void)
 __attribute__((weak))
 void sysApplicationHaltHook(void) { }
 
+
+static void reverse(char* s)
+{
+    for (int i = 0, j = strlen(s) - 1; i < j; i++, j--)
+    {
+        const char c = s[i];
+        s[i] = s[j];
+        s[j] = c;
+    }
+}
+
+char* itoa(int n, char* pbuf)
+{
+    const int sign = n;
+    if (sign < 0)
+    {
+        n = -n;
+    }
+    unsigned i = 0;
+    do
+    {
+        pbuf[i++] = n % 10 + '0';
+    }
+    while ((n /= 10) > 0);
+    if (sign < 0)
+    {
+        pbuf[i++] = '-';
+    }
+    pbuf[i] = '\0';
+    reverse(pbuf);
+    return pbuf;
+}
+
+
 void __assert_func(const char* file, int line, const char* func, const char* expr)
 {
+    (void)file;
+    (void)line;
+    (void)func;
+    (void)expr;
     port_disable();
 
+    char line_buf[11];
+    itoa(line, line_buf);
+
     char buf[128]; // We don't care about possible stack overflow because we're going to die anyway
-    snprintf(buf, sizeof(buf), "%s:%i at %s(..): %s", file, line, func, expr);
+    char* ptr = buf;
+    const unsigned size = sizeof(buf);
+    unsigned pos = 0;
+
+#define APPEND_MSG(text) { \
+        (void)strncpy(ptr + pos, text, (size > pos) ? (size - pos) : 0); \
+        pos += strlen(text); \
+    }
+
+    APPEND_MSG(file);
+    APPEND_MSG(":");
+    APPEND_MSG(line_buf);
+    if (func != NULL)
+    {
+        APPEND_MSG(" ");
+        APPEND_MSG(func);
+    }
+    APPEND_MSG(": ");
+    APPEND_MSG(expr);
+
+#undef APPEND_MSG
+
     dbg_panic_msg = buf;
 
     chSysHalt();
