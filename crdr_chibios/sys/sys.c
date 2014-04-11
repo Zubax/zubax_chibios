@@ -49,6 +49,13 @@ void sysHaltHook_(void)
 #endif
 }
 
+void sysPanic(const char* msg)
+{
+    dbg_panic_msg = msg;
+    chSysHalt();
+    while (1) { }
+}
+
 __attribute__((weak))
 void sysApplicationHaltHook(void) { }
 

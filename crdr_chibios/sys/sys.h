@@ -28,6 +28,9 @@ void lowsyslog(const char* format, ...);
  */
 extern void sysApplicationHaltHook(void);
 
+__attribute__((noreturn))
+void sysPanic(const char* msg);
+
 #ifdef __cplusplus
 }
 #endif

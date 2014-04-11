@@ -8,6 +8,8 @@ CRDR_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 CSRC += 
 
+CPPSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/libstdcpp.cpp
+
 UINCDIR += $(CRDR_CHIBIOS_DIR)
 
 UDEFS +=
@@ -51,9 +53,13 @@ INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(CHIBIOS)/
 
 NO_BUILTIN += -fno-builtin-printf -fno-builtin-fprintf  -fno-builtin-vprintf -fno-builtin-vfprintf -fno-builtin-puts
 
-USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions $(NO_BUILTIN)
+USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions -fno-unwind-tables -fno-stack-protector $(NO_BUILTIN)
+
+# Explicit usage flags are needed for LTO:
+USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit
+
 USE_COPT += -std=c99
-USE_CPPOPT += -std=c++11 -fno-rtti -fno-exceptions
+USE_CPPOPT += -std=c++11 -fno-rtti -fno-exceptions -fno-threadsafe-statics
 
 RELEASE ?= 0
 RELEASE_OPT ?= -O1 -fomit-frame-pointer
