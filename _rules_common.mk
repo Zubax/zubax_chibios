@@ -61,6 +61,8 @@ USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit
 USE_COPT += -std=c99
 USE_CPPOPT += -std=c++11 -fno-rtti -fno-exceptions -fno-threadsafe-statics
 
+USE_OPT += -nodefaultlibs -lc -lgcc -lm
+
 RELEASE ?= 0
 RELEASE_OPT ?= -O1 -fomit-frame-pointer
 DEBUG_OPT ?= -O1 -g3
