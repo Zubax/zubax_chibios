@@ -67,10 +67,10 @@ RELEASE ?= 0
 RELEASE_OPT ?= -O1 -fomit-frame-pointer
 DEBUG_OPT ?= -O1 -g3
 ifneq ($(RELEASE),0)
-    DDEFS += -DRELEASE=1 -DNDEBUG=1
+    DDEFS += -DRELEASE_BUILD=1 -DNDEBUG=1
     USE_OPT += $(RELEASE_OPT)
 else
-    DDEFS += -DDEBUG=1
+    DDEFS += -DDEBUG_BUILD=1
     USE_OPT += $(DEBUG_OPT)
 endif
 

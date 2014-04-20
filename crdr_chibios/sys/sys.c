@@ -41,7 +41,7 @@ void sysHaltHook_(void)
     }
     sysEmergencyPrint("\n");
 
-#if DEBUG
+#if DEBUG_BUILD
     if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     {
         __asm volatile ("bkpt #0\n"); // Break into the debugger

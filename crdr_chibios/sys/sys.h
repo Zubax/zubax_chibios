@@ -6,8 +6,8 @@
 
 #pragma once
 
-#if !DEBUG && !RELEASE
-#  error Either DEBUG or RELEASE must be defined
+#if !DEBUG_BUILD && !RELEASE_BUILD
+#  error Either DEBUG_BUILD or RELEASE_BUILD must be defined
 #endif
 
 #include <crdr_chibios/sys/assert_always.h>
