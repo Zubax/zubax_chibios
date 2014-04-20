@@ -71,7 +71,10 @@ template <typename T>
 using Param = const typename _internal::Param<T>;
 
 
-inline int init() { return configInit(); }
+static inline int init()
+{
+    return configInit();
+}
 
 }
 }

@@ -42,7 +42,10 @@ public:
     }
 };
 
-void init() { ::watchdogInit(); }
+static inline void init()
+{
+    ::watchdogInit();
+}
 
 }
 }
