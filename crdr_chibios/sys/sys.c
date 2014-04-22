@@ -104,7 +104,7 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
     char line_buf[11];
     itoa(line, line_buf);
 
-    char buf[128]; // We don't care about possible stack overflow because we're going to die anyway
+    char buf[256]; // We don't care about possible stack overflow because we're going to die anyway
     char* ptr = buf;
     const unsigned size = sizeof(buf);
     unsigned pos = 0;
