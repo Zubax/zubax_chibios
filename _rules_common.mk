@@ -6,7 +6,8 @@
 
 CRDR_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-CSRC += 
+CSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/sys_console.c                    \
+        $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/sys.c
 
 CPPSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/libstdcpp.cpp
 
@@ -37,7 +38,10 @@ include $(CHIBIOS)/os/kernel/kernel.mk
 include $(CHIBIOS)/os/various/cpp_wrappers/kernel.mk
 
 
-VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c $(CHIBIOS)/os/various/chprintf.c $(CHIBIOS)/os/various/shell.c
+VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c    \
+             $(CHIBIOS)/os/various/chprintf.c    \
+             $(CHIBIOS)/os/various/shell.c       \
+             $(CHIBIOS)/os/various/memstreams.c
 
 CSRC += $(PORTSRC) $(KERNSRC) $(HALSRC) $(PLATFORMSRC) $(VARIOUSSRC)
 

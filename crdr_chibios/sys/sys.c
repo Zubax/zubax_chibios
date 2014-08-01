@@ -4,14 +4,13 @@
  * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
  */
 
+#include "sys.h"
 #include <ch.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
-#include <chprintf.h>
-#include "sys.h"
 
 __attribute__((weak))
 void *__dso_handle;
@@ -131,38 +130,6 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
 
     chSysHalt();
     while (1) { }
-}
-
-void lowsyslog(const char* format, ...)
-{
-    va_list vl;
-    va_start(vl, format);
-    chvprintf((BaseSequentialStream*)&(STDOUT_SD), format, vl);
-    va_end(vl);
-}
-
-int printf(const char* format, ...)
-{
-    va_list vl;
-    va_start(vl, format);
-    chvprintf((BaseSequentialStream*)&(STDOUT_SD), format, vl);
-    va_end(vl);
-    return strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
-}
-
-int vprintf(const char* format, va_list vl)
-{
-    chvprintf((BaseSequentialStream*)&(STDOUT_SD), format, vl);
-    return strlen(format);
-}
-
-int puts(const char* str)
-{
-    const int len = strlen(str);
-    if (len)
-        sdWrite(&STDOUT_SD, (uint8_t*)str, len); // this fires an assert() if len = 0, haha!
-    sdWrite(&STDOUT_SD, (uint8_t*)"\n", 1);
-    return len + 1;
 }
 
 void _exit(int status)
