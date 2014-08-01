@@ -9,7 +9,6 @@ CRDR_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 CSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/config/config.c                      \
         $(CRDR_CHIBIOS_DIR)/crdr_chibios/config/config_storage_stm32.c        \
         $(CRDR_CHIBIOS_DIR)/crdr_chibios/watchdog/watchdog_stm32.c            \
-        $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/sys.c                            \
         $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/sys_stm32.c
 
 CPPSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/config/config_cli.cpp
