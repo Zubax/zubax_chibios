@@ -21,6 +21,3 @@ __pycache__
 .project
 .cproject
 .pydevproject
-
-# 3rdparty
-chibios
