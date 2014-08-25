@@ -26,29 +26,39 @@ static int printParam(const char* name, bool verbose)
         {
             const char* nm = configNameByIndex(i);
             if (!nm)
+            {
                 break;
+            }
             int len = strlen(nm);
             if (len > _max_name_len)
+            {
                 _max_name_len = len;
+            }
         }
     }
 
     ConfigParam par;
     const int res = configGetDescr(name, &par);
     if (res)
+    {
         return res;
+    }
 
     if (par.type == CONFIG_TYPE_FLOAT)
     {
         printf("%-*s = %-12f", _max_name_len, name, configGet(name));
         if (verbose)
-            printf("[%f; %f] (%f)", par.min, par.max, par.default_);
+        {
+            printf("[%f, %f] (%f)", par.min, par.max, par.default_);
+        }
     }
     else
     {
         printf("%-*s = %-12i", _max_name_len, name, (int)configGet(name));
         if (verbose)
-            printf("[%i; %i] (%i)", (int)par.min, (int)par.max, (int)par.default_);
+        {
+            printf("[%i, %i] (%i)", (int)par.min, (int)par.max, (int)par.default_);
+        }
     }
     puts("");
     return 0;
@@ -64,10 +74,14 @@ int executeCliCommand(int argc, char *argv[])
         {
             const char* name = configNameByIndex(i);
             if (!name)
+            {
                 break;
+            }
             const int res = printParam(name, true);
             if (res)
+            {
                 return res;
+            }
         }
         return 0;
     }
@@ -99,7 +113,9 @@ int executeCliCommand(int argc, char *argv[])
         const float value = atoff(argv[2]);
         int res = configSet(name, value);
         if (res == 0)
+        {
             res = printParam(name, false);
+        }
         return res;
     }
     else
@@ -109,7 +125,9 @@ int executeCliCommand(int argc, char *argv[])
             "  cfg save\n"
             "  cfg erase\n"
             "  cfg get <name>\n"
-            "  cfg set <name> <value>");
+            "  cfg set <name> <value>\n"
+            "Note that save or erase may halt CPU for a few milliseconds which\n"
+            "can cause transient failures in real time tasks or communications.");
     }
     return -EINVAL;
 }
