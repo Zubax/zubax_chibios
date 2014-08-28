@@ -29,7 +29,7 @@ static int printParam(const char* name, bool verbose)
             {
                 break;
             }
-            int len = strlen(nm);
+            int len = int(strlen(nm));
             if (len > _max_name_len)
             {
                 _max_name_len = len;
