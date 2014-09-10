@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include <stdint.h>
 #include <assert.h>
 #include <hal.h>
-#include <crdr_chibios/watchdog/watchdog.h>
-#include <crdr_chibios/sys/assert_always.h>
-#include <crdr_chibios/sys/sys.h>
+#include <zubax_chibios/watchdog/watchdog.h>
+#include <zubax_chibios/sys/assert_always.h>
+#include <zubax_chibios/sys/sys.h>
 
 #define KR_KEY_ACCESS   0x5555
 #define KR_KEY_RELOAD   0xAAAA

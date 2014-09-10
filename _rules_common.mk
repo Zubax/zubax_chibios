@@ -1,17 +1,17 @@
 #
-# Copyright (c) 2014 Courierdrone, courierdrone.com
+# Copyright (c) 2014 Zubax, zubax.com
 # Distributed under the MIT License, available in the file LICENSE.
-# Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+# Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
-CRDR_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+ZUBAX_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-CSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/sys_console.c                    \
-        $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/sys.c
+CSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys_console.c                    \
+        $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.c
 
-CPPSRC += $(CRDR_CHIBIOS_DIR)/crdr_chibios/sys/libstdcpp.cpp
+CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/libstdcpp.cpp
 
-UINCDIR += $(CRDR_CHIBIOS_DIR)
+UINCDIR += $(ZUBAX_CHIBIOS_DIR)
 
 UDEFS +=
 
@@ -32,7 +32,7 @@ USE_THUMB ?= yes
 USE_VERBOSE_COMPILE ?= no
 USE_FWLIB ?= no
 
-CHIBIOS := $(CRDR_CHIBIOS_DIR)/chibios
+CHIBIOS := $(ZUBAX_CHIBIOS_DIR)/chibios
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
 include $(CHIBIOS)/os/various/cpp_wrappers/kernel.mk

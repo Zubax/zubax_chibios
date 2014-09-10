@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include <ch.h>
@@ -12,9 +12,9 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <crdr_chibios/sys/assert_always.h>
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/config/config.h>
+#include <zubax_chibios/sys/assert_always.h>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/config/config.h>
 
 #ifndef CONFIG_PARAMS_MAX
 #  define CONFIG_PARAMS_MAX     40

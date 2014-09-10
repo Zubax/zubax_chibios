@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include <stdbool.h>
@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <crdr_chibios/config/cli.hpp>
-#include <crdr_chibios/config/config.hpp>
+#include <zubax_chibios/config/cli.hpp>
+#include <zubax_chibios/config/config.hpp>
 
-namespace crdr_chibios
+namespace zubax_chibios
 {
 namespace config
 {

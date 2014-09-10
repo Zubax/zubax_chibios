@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #pragma once
@@ -9,7 +9,7 @@
 #include <type_traits>
 #include "config.h"
 
-namespace crdr_chibios
+namespace zubax_chibios
 {
 namespace config
 {
