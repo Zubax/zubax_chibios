@@ -58,6 +58,23 @@ void sysPanic(const char* msg)
 __attribute__((weak))
 void sysApplicationHaltHook(void) { }
 
+void sysSleepUntilChTime(systime_t sleep_until)
+{
+    chSysLock();
+    sleep_until -= chTimeNow();
+    if (((int)sleep_until) > 0)
+    {
+        chThdSleepS(sleep_until);
+    }
+    chSysUnlock();
+
+#if DEBUG_BUILD
+    if (((int)sleep_until) < 0)
+    {
+        lowsyslog("%s: Lag %d ts\n", chThdSelf()->p_name, (int)sleep_until);
+    }
+#endif
+}
 
 static void reverse(char* s)
 {

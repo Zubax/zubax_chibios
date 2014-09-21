@@ -28,6 +28,12 @@ void lowsyslog(const char* format, ...);
  */
 extern void sysApplicationHaltHook(void);
 
+/**
+ * Replacement for chThdSleepUntil() that accepts timestamps from the past.
+ * http://sourceforge.net/p/chibios/bugs/292/#ec7c
+ */
+void sysSleepUntilChTime(systime_t sleep_until);
+
 __attribute__((noreturn))
 void sysPanic(const char* msg);
 
