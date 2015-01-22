@@ -91,7 +91,20 @@ int __aeabi_atexit(void*, void(*)(void*), void*)
     return 0;
 }
 
-__extension__ typedef int __guard __attribute__((mode (__DI__)));
+#ifdef __arm__
+/**
+ * Ref. "Run-time ABI for the ARM Architecture" page 23..24
+ * http://infocenter.arm.com/help/topic/com.arm.doc.ihi0043d/IHI0043D_rtabi.pdf
+ *
+ * ChibiOS issue: http://forum.chibios.org/phpbb/viewtopic.php?f=3&t=2404
+ *
+ * A 32-bit, 4-byte-aligned static data value. The least significant 2 bits
+ * must be statically initialized to 0.
+ */
+typedef int __guard;
+#else
+# error "Unknown architecture"
+#endif
 
 void __cxa_atexit(void(*)(void *), void*, void*)
 {
