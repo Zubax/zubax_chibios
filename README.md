@@ -15,3 +15,28 @@ Basic usage:
     2. List the include directories in `UINCDIR`
     3. Define `PROJECT` and `SERIAL_CLI_PORT_NUMBER`
     4. Include `zubax_chibios/rules_<target-mcu>.mk`, e.g. `include zubax_chibios/rules_stm32f105_107.mk`
+
+## Debugging using Eclipse and Black Magic Debug Probe
+
+- Open your Eclipse project
+- Go Eclipse → Window → Preferences → Run/Debug → Launching → Default Launchers:
+  - Select `GDB Hardware Debugging` → `[Debug]`, then tick *only* `Legacy GDB Hardware Debugging Launcher`, and make sure that the option for GDB (DSF) is disabled.
+- Go Eclipse → Run → Debug Configurations:
+  - Invoke the context menu for `GDB Hardware Debugging`, select New.
+  - Tab `Debugger`:
+    - Set the field `GDB Command` to `arm-none-eabi-gdb` (or other if necessary).
+    - Untick `Use remote target`.
+  - Tab `Startup`:
+    - If a boot loader is used, make sure that `Image offset` is configured correctly.
+    - Enter the following in the field `Initialization commands`:
+```gdb
+target extended <BLACK_MAGIC_SERIAL_PORT>
+
+monitor swdp_scan   # Use jtag_scan instead if necessary
+attach 1
+monitor vector_catch disable hard
+
+set mem inaccessible-by-default off
+monitor option erase
+set print pretty
+```
