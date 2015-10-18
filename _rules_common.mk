@@ -102,7 +102,7 @@ AOPT +=
 # THUMB-specific options here
 TOPT ?= -mthumb -DTHUMB=1
 
-CWARN += -Wall -Wextra -Werror -Wstrict-prototypes
+CWARN += -Wall -Wextra -Wstrict-prototypes
 CPPWARN += -Wall -Wextra -Werror
 
 # asm statement fix
