@@ -18,20 +18,21 @@
 static MUTEX_DECL(_mutex);  ///< Doesn't require initialization
 static char _buffer[256];
 
+static BaseSequentialStream* _stdout_stream = (BaseSequentialStream*)&STDOUT_SD;
 
-static void writeExpandingCrLf(const char* str)
+static void writeExpandingCrLf(BaseSequentialStream* stream, const char* str)
 {
     for (const char* pc = str; *pc != '\0'; pc++)
     {
         if (*pc == '\n')
         {
-            sdPut(&STDOUT_SD, '\r');
+            chSequentialStreamPut(stream, '\r');
         }
-        sdPut(&STDOUT_SD, *pc);
+        chSequentialStreamPut(stream, *pc);
     }
 }
 
-static void genericPrint(const char* format, va_list vl)
+static void genericPrint(BaseSequentialStream* stream, const char* format, va_list vl)
 {
     /*
      * Printing the string into the buffer using chvprintf()
@@ -48,7 +49,7 @@ static void genericPrint(const char* format, va_list vl)
      * Writing the buffer replacing "\n" --> "\r\n"
      */
     chMtxLock(&_mutex);
-    writeExpandingCrLf(_buffer);
+    writeExpandingCrLf(stream, _buffer);
     chMtxUnlock();
 }
 
@@ -56,7 +57,7 @@ void lowsyslog(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
-    genericPrint(format, vl);
+    genericPrint((BaseSequentialStream*)&STDOUT_SD, format, vl);   // Lowsyslog is always directed to STDOUT_SD
     va_end(vl);
 }
 
@@ -64,22 +65,27 @@ int printf(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
-    genericPrint(format, vl);
+    genericPrint(_stdout_stream, format, vl);
     va_end(vl);
     return strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
 }
 
 int vprintf(const char* format, va_list vl)
 {
-    genericPrint(format, vl);
+    genericPrint(_stdout_stream, format, vl);
     return strlen(format);
 }
 
 int puts(const char* str)
 {
     chMtxLock(&_mutex);
-    writeExpandingCrLf(str);
-    writeExpandingCrLf("\n");
+    writeExpandingCrLf(_stdout_stream, str);
+    writeExpandingCrLf(_stdout_stream, "\n");
     chMtxUnlock();
     return strlen(str) + 2;
+}
+
+void sysSetStdOutStream(BaseSequentialStream* stream)
+{
+    _stdout_stream = stream;
 }

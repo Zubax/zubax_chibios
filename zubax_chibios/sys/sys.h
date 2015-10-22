@@ -11,6 +11,7 @@
 #endif
 
 #include <zubax_chibios/sys/assert_always.h>
+#include <ch.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,11 @@ extern "C" {
  */
 __attribute__ ((format (printf, 1, 2)))
 void lowsyslog(const char* format, ...);
+
+/**
+ * Changes current stdout stream.
+ */
+void sysSetStdOutStream(BaseSequentialStream* stream);
 
 /**
  * Emergency termination hook that can be overriden by the application.
