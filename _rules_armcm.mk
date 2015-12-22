@@ -42,13 +42,13 @@ VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c            \
              $(CHIBIOS)/os/various/shell.c               \
              $(CHIBIOS)/os/hal/lib/streams/chprintf.c
 
-CSRC += $(PORTSRC) $(KERNSRC) $(HALSRC) $(PLATFORMSRC) $(VARIOUSSRC)
+CSRC += $(STARTUPSRC) $(KERNSRC) $(PORTSRC) $(OSALSRC) $(HALSRC) $(PLATFORMSRC) $(VARIOUSSRC)
 
 CPPSRC += $(CHCPPSRC)
 
-ASMSRC += $(PORTASM)
+ASMSRC += $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(CHIBIOS)/os/various
+INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPINC) $(OSALINC) $(CHIBIOS)/os/various
 
 #
 # Build configuration
@@ -72,9 +72,11 @@ RELEASE_OPT ?= -O1 -fomit-frame-pointer
 DEBUG_OPT ?= -O1 -g3
 ifneq ($(RELEASE),0)
     DDEFS += -DRELEASE_BUILD=1 -DNDEBUG=1
+    DADEFS += -DRELEASE_BUILD=1 -DNDEBUG=1
     USE_OPT += $(RELEASE_OPT)
 else
     DDEFS += -DDEBUG_BUILD=1
+    DADEFS += -DDEBUG_BUILD=1
     USE_OPT += $(DEBUG_OPT)
 endif
 
