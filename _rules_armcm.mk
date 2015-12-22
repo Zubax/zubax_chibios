@@ -30,7 +30,6 @@ UDEFS += -DCORTEX_ENABLE_WFI_IDLE=1 -DCHPRINTF_USE_FLOAT=1
 USE_LINK_GC = yes
 USE_THUMB ?= yes
 USE_VERBOSE_COMPILE ?= no
-USE_FWLIB ?= no
 
 CHIBIOS := $(ZUBAX_CHIBIOS_DIR)/chibios
 include $(CHIBIOS)/os/hal/hal.mk
@@ -64,7 +63,7 @@ USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions -fno-unwind-ta
 USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit
 
 USE_COPT += -std=c99
-USE_CPPOPT += -std=c++11 -fno-rtti -fno-exceptions -fno-threadsafe-statics
+USE_CPPOPT += -std=c++14 -fno-rtti -fno-exceptions -fno-threadsafe-statics
 
 USE_OPT += -nodefaultlibs -lc -lgcc -lm
 
