@@ -21,16 +21,3 @@ void sysEmergencyPrint(const char* str)
         USARTX->DR = *p;
     }
 }
-
-void sysDisableDebugPort(void)
-{
-    __disable_irq();
-    uint32_t mapr = AFIO->MAPR;
-    mapr &= ~AFIO_MAPR_SWJ_CFG; // these bits are write-only
-
-    // Disable both SWD and JTAG:
-    mapr |= AFIO_MAPR_SWJ_CFG_DISABLE;
-
-    AFIO->MAPR = mapr;
-    __enable_irq();
-}

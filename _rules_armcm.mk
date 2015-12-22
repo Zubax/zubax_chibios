@@ -34,14 +34,14 @@ USE_FWLIB ?= no
 
 CHIBIOS := $(ZUBAX_CHIBIOS_DIR)/chibios
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/kernel/kernel.mk
-include $(CHIBIOS)/os/various/cpp_wrappers/kernel.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/various/cpp_wrappers/chcpp.mk
 
 
-VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c    \
-             $(CHIBIOS)/os/various/chprintf.c    \
-             $(CHIBIOS)/os/various/shell.c       \
-             $(CHIBIOS)/os/various/memstreams.c
+VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c            \
+             $(CHIBIOS)/os/various/shell.c               \
+             $(CHIBIOS)/os/hal/lib/streams/chprintf.c
 
 CSRC += $(PORTSRC) $(KERNSRC) $(HALSRC) $(PLATFORMSRC) $(VARIOUSSRC)
 
@@ -83,8 +83,6 @@ endif
 # Compiler options
 #
 
-MCU  = cortex-m3
-
 TOOLCHAIN_PREFIX ?= arm-none-eabi
 CC   = $(TOOLCHAIN_PREFIX)-gcc
 CPPC = $(TOOLCHAIN_PREFIX)-g++
@@ -108,4 +106,4 @@ CPPWARN += -Wall -Wextra -Werror
 # asm statement fix
 DDEFS += -Dasm=__asm
 
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/rules.mk
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/rules.mk
