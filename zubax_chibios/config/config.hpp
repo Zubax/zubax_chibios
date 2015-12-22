@@ -35,6 +35,9 @@ struct Param : public ::ConfigParam
     }
 
     T get() const { return T(::configGet(name)); }
+
+    bool isMax() const { return get() >= T(::ConfigParam::max); }
+    bool isMin() const { return get() <= T(::ConfigParam::min); }
 };
 
 template <>

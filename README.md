@@ -28,7 +28,9 @@ Basic usage:
     - Untick `Use remote target`.
   - Tab `Startup`:
     - If a boot loader is used, make sure that `Image offset` is configured correctly.
-    - Enter the following in the field `Initialization commands`:
+    - Uncheck `Resume`.
+    - In the field `Run Commands`, enter `run`. This is mandatory, otherwise the debugger will try to `continue`.
+    - Enter the following in the field `Initialization Commands`:
 ```gdb
 target extended <BLACK_MAGIC_SERIAL_PORT>
 

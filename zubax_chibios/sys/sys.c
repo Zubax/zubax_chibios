@@ -15,6 +15,9 @@
 __attribute__((weak))
 void *__dso_handle;
 
+__attribute__((weak))
+int __errno;
+
 #if !CH_DBG_ENABLED
 const char *dbg_panic_msg;
 #endif
