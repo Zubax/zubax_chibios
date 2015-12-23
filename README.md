@@ -28,17 +28,9 @@ Basic usage:
     - Untick `Use remote target`.
   - Tab `Startup`:
     - If a boot loader is used, make sure that `Image offset` is configured correctly.
-    - Uncheck `Resume`.
-    - In the field `Run Commands`, enter `run`. This is mandatory, otherwise the debugger will try to `continue`.
     - Enter the following in the field `Initialization Commands`:
 ```gdb
 target extended <BLACK_MAGIC_SERIAL_PORT>
-
 monitor swdp_scan   # Use jtag_scan instead if necessary
 attach 1
-monitor vector_catch disable hard
-
-set mem inaccessible-by-default off
-monitor option erase
-set print pretty
 ```
