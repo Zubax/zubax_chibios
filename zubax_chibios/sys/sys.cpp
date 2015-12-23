@@ -171,4 +171,26 @@ unsigned sleep(unsigned int seconds)
     return 0;
 }
 
+void* malloc(size_t sz)
+{
+    return chCoreAlloc(sz);
+}
+
+void* calloc(size_t, size_t)
+{
+    os::panic("calloc");
+    return nullptr;
+}
+
+void* realloc(void*, size_t)
+{
+    os::panic("realloc");
+    return nullptr;
+}
+
+void free(void*)
+{
+    os::panic("free");
+}
+
 }
