@@ -26,6 +26,10 @@ extern void zchSysHaltHook(const char* reason);
 /*
  * Default overrides.
  */
+#ifndef CH_CFG_USE_TM
+#define CH_CFG_USE_TM                           FALSE
+#endif
+
 #ifndef CH_CFG_USE_MUTEXES_RECURSIVE
 #define CH_CFG_USE_MUTEXES_RECURSIVE            TRUE
 #endif

@@ -40,7 +40,8 @@ include $(CHIBIOS)/os/various/cpp_wrappers/chcpp.mk
 
 VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c            \
              $(CHIBIOS)/os/various/shell.c               \
-             $(CHIBIOS)/os/hal/lib/streams/chprintf.c
+             $(CHIBIOS)/os/hal/lib/streams/chprintf.c    \
+             $(CHIBIOS)/os/hal/lib/streams/memstreams.c
 
 CSRC += $(STARTUPSRC) $(KERNSRC) $(PORTSRC) $(OSALSRC) $(HALSRC) $(PLATFORMSRC) $(VARIOUSSRC)
 
@@ -48,7 +49,8 @@ CPPSRC += $(CHCPPSRC)
 
 ASMSRC += $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPINC) $(OSALINC) $(CHIBIOS)/os/various
+INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPINC) $(OSALINC) \
+          $(CHIBIOS)/os/various $(CHIBIOS)/os/hal/lib/streams
 
 #
 # Build configuration

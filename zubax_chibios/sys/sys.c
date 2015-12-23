@@ -18,32 +18,28 @@ void *__dso_handle;
 __attribute__((weak))
 int __errno;
 
-#if !CH_DBG_ENABLED
-const char *dbg_panic_msg;
-#endif
-
 void sysEmergencyPrint(const char* str);
 
-void sysHaltHook_(void)
+void zchSysHaltHook(const char* msg)
 {
     sysApplicationHaltHook();
 
     port_disable();
     sysEmergencyPrint("\nPANIC [");
-    const Thread *pthread = chThdSelf();
+    const thread_t *pthread = chThdGetSelfX();
     if (pthread && pthread->p_name)
     {
         sysEmergencyPrint(pthread->p_name);
     }
     sysEmergencyPrint("] ");
 
-    if (dbg_panic_msg != NULL)
+    if (msg != NULL)
     {
-        sysEmergencyPrint(dbg_panic_msg);
+        sysEmergencyPrint(msg);
     }
     sysEmergencyPrint("\n");
 
-#if DEBUG_BUILD
+#if DEBUG_BUILD && defined(CoreDebug)
     if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     {
         __asm volatile ("bkpt #0\n"); // Break into the debugger
@@ -53,8 +49,7 @@ void sysHaltHook_(void)
 
 void sysPanic(const char* msg)
 {
-    dbg_panic_msg = msg;
-    chSysHalt();
+    chSysHalt(msg);
     while (1) { }
 }
 
@@ -64,7 +59,7 @@ void sysApplicationHaltHook(void) { }
 void sysSleepUntilChTime(systime_t sleep_until)
 {
     chSysLock();
-    sleep_until -= chTimeNow();
+    sleep_until -= chVTGetSystemTime();
     if (((int)sleep_until) > 0)
     {
         chThdSleepS(sleep_until);
@@ -74,7 +69,7 @@ void sysSleepUntilChTime(systime_t sleep_until)
 #if DEBUG_BUILD
     if (((int)sleep_until) < 0)
     {
-        lowsyslog("%s: Lag %d ts\n", chThdSelf()->p_name, (int)sleep_until);
+        lowsyslog("%s: Lag %d ts\n", chThdGetSelfX()->p_name, (int)sleep_until);
     }
 #endif
 }
@@ -146,16 +141,14 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
 
 #undef APPEND_MSG
 
-    dbg_panic_msg = buf;
-
-    chSysHalt();
+    chSysHalt(buf);
     while (1) { }
 }
 
 void _exit(int status)
 {
     (void) status;
-    chSysHalt();
+    chSysHalt("exit");
     while (1) { }
 }
 

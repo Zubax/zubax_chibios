@@ -50,7 +50,7 @@ static void genericPrint(BaseSequentialStream* stream, const char* format, va_li
      */
     chMtxLock(&_mutex);
     writeExpandingCrLf(stream, _buffer);
-    chMtxUnlock();
+    chMtxUnlock(&_mutex);
 }
 
 void lowsyslog(const char* format, ...)
@@ -81,7 +81,7 @@ int puts(const char* str)
     chMtxLock(&_mutex);
     writeExpandingCrLf(_stdout_stream, str);
     writeExpandingCrLf(_stdout_stream, "\n");
-    chMtxUnlock();
+    chMtxUnlock(&_mutex);
     return strlen(str) + 2;
 }
 

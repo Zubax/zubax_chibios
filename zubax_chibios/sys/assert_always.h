@@ -9,10 +9,6 @@
 #include <ch.h>
 #include <hal.h>
 
-#if !CH_DBG_ENABLED
-extern const char *dbg_panic_msg;
-#endif
-
 #ifndef STRINGIZE
 #  define STRINGIZE2(x)   #x
 #  define STRINGIZE(x)    STRINGIZE2(x)
@@ -23,7 +19,6 @@ extern const char *dbg_panic_msg;
 #define ASSERT_ALWAYS(x)                                    \
     do {                                                    \
         if ((x) == 0) {                                     \
-            dbg_panic_msg = MAKE_ASSERT_MSG_();             \
-            chSysHalt();                                    \
+            chSysHalt(MAKE_ASSERT_MSG_());                  \
         }                                                   \
     } while (0)

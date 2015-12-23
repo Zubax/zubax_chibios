@@ -4,12 +4,17 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
-#include <stdint.h>
-#include <assert.h>
+/*
+ * This file was originally written in pure C99, but later it had to be migrated to C++.
+ * In its current state it's kinda written in C99 with C++ features.
+ * This is not a proper C++.
+ */
+
+#include <cstdint>
+#include <cassert>
 #include <hal.h>
-#include <zubax_chibios/watchdog/watchdog.h>
-#include <zubax_chibios/sys/assert_always.h>
-#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/watchdog.hpp>
+#include <zubax_chibios/os.hpp>
 
 #define KR_KEY_ACCESS   0x5555
 #define KR_KEY_RELOAD   0xAAAA
@@ -20,22 +25,25 @@
 #define MAX_NUM_WATCHDOGS 31
 
 
-static int _wdg_timeout_ms = 0;
+static unsigned _wdg_timeout_ms = 0;
 
-static uint32_t _mask __attribute__((section (".noinit")));
-static int _num_watchdogs __attribute__((section (".noinit")));
+static std::uint32_t _mask __attribute__((section (".noinit")));
+static std::uint8_t _num_watchdogs __attribute__((section (".noinit")));
 
 
-static void setTimeout(int timeout_ms)
+static void setTimeout(unsigned timeout_ms)
 {
-    if (timeout_ms <= 0) {
+    if (timeout_ms <= 0)
+    {
         assert(0);
         timeout_ms = 1;
     }
 
-    int reload_value = timeout_ms / 6;  // For 1/256 prescaler
+    unsigned reload_value = timeout_ms / 6;  // For 1/256 prescaler
     if (reload_value > MAX_RELOAD_VAL)
+    {
         reload_value = MAX_RELOAD_VAL;
+    }
 
     IWDG->KR = KR_KEY_RELOAD;
 
@@ -55,14 +63,17 @@ void watchdogInit(void)
     ASSERT_ALWAYS(RCC->CSR & RCC_CSR_LSION);  // Make dure LSI is enabled
     while (!(RCC->CSR & RCC_CSR_LSIRDY)) { }  // Wait for LSI startup
 
-    if (RCC->CSR & RCC_CSR_IWDGRSTF) {
+    if (RCC->CSR & RCC_CSR_IWDGRSTF)
+    {
         lowsyslog("Watchdog: RESET WAS CAUSED BY WATCHDOG TIMEOUT\n");
         lowsyslog("Watchdog: RCC_CSR=0x%08x\n", (unsigned)RCC->CSR);
         lowsyslog("Watchdog: LAST STATE: mask=0x%08x, num=%d\n", (unsigned int)_mask, _num_watchdogs);
         chSysSuspend();
         RCC->CSR |= RCC_CSR_RMVF;
         chSysEnable();
-    } else {
+    }
+    else
+    {
         lowsyslog("Watchdog: Reset was not caused by watchdog, it's OK\n");
     }
     _mask = 0;
@@ -73,24 +84,27 @@ void watchdogInit(void)
     chSysEnable();
 }
 
-int watchdogCreate(int timeout_ms)
+int watchdogCreate(unsigned timeout_ms)
 {
-    if (timeout_ms <= 0) {
+    if (timeout_ms <= 0)
+    {
         assert(0);
         return -1;
     }
 
     chSysSuspend();
-    if (_num_watchdogs >= MAX_NUM_WATCHDOGS) {
+    if (_num_watchdogs >= MAX_NUM_WATCHDOGS)
+    {
         chSysEnable();
         assert(0);
         return -1;
     }
     const int new_id = _num_watchdogs++;
-    _mask |= 1 << new_id;                 // Reset immediately
+    _mask |= 1U << new_id;                 // Reset immediately
     chSysEnable();
 
-    if (timeout_ms > _wdg_timeout_ms) {
+    if (timeout_ms > _wdg_timeout_ms)
+    {
         setTimeout(timeout_ms);
         _wdg_timeout_ms = timeout_ms;
         lowsyslog("Watchdog: Global timeout set to %i ms\n", _wdg_timeout_ms);
@@ -103,9 +117,10 @@ void watchdogReset(int id)
     assert(id >= 0 && id < _num_watchdogs);
 
     chSysSuspend();
-    _mask |= 1 << id;
-    const uint32_t valid_bits_mask = (1 << _num_watchdogs) - 1;
-    if ((_mask & valid_bits_mask) == valid_bits_mask) {
+    _mask |= 1U << id;
+    const std::uint32_t valid_bits_mask = (1U << _num_watchdogs) - 1;
+    if ((_mask & valid_bits_mask) == valid_bits_mask)
+    {
         IWDG->KR = KR_KEY_RELOAD;
         _mask = 0;
     }

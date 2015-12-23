@@ -7,7 +7,7 @@
 #pragma once
 
 #include <cassert>
-#include <zubax_chibios/sys/assert_always.h>
+#include <zubax_chibios/os.hpp>
 #include "watchdog.h"
 
 namespace zubax_chibios
@@ -22,7 +22,7 @@ class Timer
 public:
     bool isStarted() const { return id_ >= 0; }
 
-    void startMSec(int timeout_ms)
+    void startMSec(unsigned timeout_ms)
     {
         if (!isStarted())
         {
