@@ -4,16 +4,19 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
-#include "sys.h"
-#include <ch.h>
+#include "sys.hpp"
+#include <ch.hpp>
+#include <hal.h>
 #include <chprintf.h>
 #include <memstreams.h>
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cassert>
+#include <cstring>
+#include <cstdarg>
 
+
+namespace os
+{
 
 static MUTEX_DECL(_mutex);  ///< Doesn't require initialization
 static char _buffer[256];
@@ -61,19 +64,32 @@ void lowsyslog(const char* format, ...)
     va_end(vl);
 }
 
+
+void setStdOutStream(BaseSequentialStream* stream)
+{
+    _stdout_stream = stream;
+}
+
+} // namespace os
+
+extern "C"
+{
+
+using namespace os;
+
 int printf(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
     genericPrint(_stdout_stream, format, vl);
     va_end(vl);
-    return strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
+    return std::strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
 }
 
 int vprintf(const char* format, va_list vl)
 {
     genericPrint(_stdout_stream, format, vl);
-    return strlen(format);
+    return std::strlen(format);
 }
 
 int puts(const char* str)
@@ -82,10 +98,7 @@ int puts(const char* str)
     writeExpandingCrLf(_stdout_stream, str);
     writeExpandingCrLf(_stdout_stream, "\n");
     chMtxUnlock(&_mutex);
-    return strlen(str) + 2;
+    return std::strlen(str) + 2;
 }
 
-void sysSetStdOutStream(BaseSequentialStream* stream)
-{
-    _stdout_stream = stream;
 }

@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
-#include <zubax_chibios/config.hpp>
+#include <zubax_chibios/os.hpp>
 
 namespace os
 {
@@ -62,7 +62,7 @@ static int printParam(const char* name, bool verbose)
     return 0;
 }
 
-int executeCliCommand(int argc, char *argv[])
+int executeCLICommand(int argc, char *argv[])
 {
     const char* const command = (argc < 1) ? "" : argv[0];
 

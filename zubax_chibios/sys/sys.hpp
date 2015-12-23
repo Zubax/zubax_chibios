@@ -10,16 +10,28 @@
 #  error Either DEBUG_BUILD or RELEASE_BUILD must be defined
 #endif
 
-#include <zubax_chibios/sys/assert_always.h>
-#include <ch.h>
+#include <ch.hpp>
 
-#ifdef __cplusplus
-extern "C" {
+
+#ifndef STRINGIZE
+#  define STRINGIZE2(x)   #x
+#  define STRINGIZE(x)    STRINGIZE2(x)
 #endif
 
+#define MAKE_ASSERT_MSG_() __FILE__ ":" STRINGIZE(__LINE__)
+
+#define ASSERT_ALWAYS(x)                                    \
+    do {                                                    \
+        if ((x) == 0) {                                     \
+            chSysHalt(MAKE_ASSERT_MSG_());                  \
+        }                                                   \
+    } while (0)
+
+namespace os
+{
 /**
  * NuttX-like console print; should be used instead of printf()/chprintf()
- * TODO: use type safe version for C++.
+ * TODO: use type safe version based on variadic templates.
  */
 __attribute__ ((format (printf, 1, 2)))
 void lowsyslog(const char* format, ...);
@@ -27,22 +39,20 @@ void lowsyslog(const char* format, ...);
 /**
  * Changes current stdout stream.
  */
-void sysSetStdOutStream(BaseSequentialStream* stream);
+void setStdOutStream(BaseSequentialStream* stream);
 
 /**
  * Emergency termination hook that can be overriden by the application.
  */
-extern void sysApplicationHaltHook(void);
+extern void applicationHaltHook(void);
 
 /**
  * Replacement for chThdSleepUntil() that accepts timestamps from the past.
  * http://sourceforge.net/p/chibios/bugs/292/#ec7c
  */
-void sysSleepUntilChTime(systime_t sleep_until);
+void sleepUntilChTime(systime_t sleep_until);
 
 __attribute__((noreturn))
-void sysPanic(const char* msg);
+void panic(const char* msg);
 
-#ifdef __cplusplus
 }
-#endif

@@ -7,7 +7,7 @@
 #include <ch.hpp>
 #include <cstdlib>
 #include <sys/types.h>
-#include "sys.h"
+#include "sys.hpp"
 
 void* operator new(size_t sz)
 {
@@ -21,12 +21,12 @@ void* operator new[](size_t sz)
 
 void operator delete(void*)
 {
-    sysPanic("delete");
+    os::panic("delete");
 }
 
 void operator delete[](void*)
 {
-    sysPanic("delete");
+    os::panic("delete");
 }
 
 /*
@@ -37,39 +37,39 @@ void operator delete[](void*)
 namespace std
 {
 
-void __throw_bad_exception() { sysPanic("throw"); }
+void __throw_bad_exception() { os::panic("throw"); }
 
-void __throw_bad_alloc() { sysPanic("throw"); }
+void __throw_bad_alloc() { os::panic("throw"); }
 
-void __throw_bad_cast() { sysPanic("throw"); }
+void __throw_bad_cast() { os::panic("throw"); }
 
-void __throw_bad_typeid() { sysPanic("throw"); }
+void __throw_bad_typeid() { os::panic("throw"); }
 
-void __throw_logic_error(const char*) { sysPanic("throw"); }
+void __throw_logic_error(const char*) { os::panic("throw"); }
 
-void __throw_domain_error(const char*) { sysPanic("throw"); }
+void __throw_domain_error(const char*) { os::panic("throw"); }
 
-void __throw_invalid_argument(const char*) { sysPanic("throw"); }
+void __throw_invalid_argument(const char*) { os::panic("throw"); }
 
-void __throw_length_error(const char*) { sysPanic("throw"); }
+void __throw_length_error(const char*) { os::panic("throw"); }
 
-void __throw_out_of_range(const char*) { sysPanic("throw"); }
+void __throw_out_of_range(const char*) { os::panic("throw"); }
 
-void __throw_runtime_error(const char*) { sysPanic("throw"); }
+void __throw_runtime_error(const char*) { os::panic("throw"); }
 
-void __throw_range_error(const char*) { sysPanic("throw"); }
+void __throw_range_error(const char*) { os::panic("throw"); }
 
-void __throw_overflow_error(const char*) { sysPanic("throw"); }
+void __throw_overflow_error(const char*) { os::panic("throw"); }
 
-void __throw_underflow_error(const char*) { sysPanic("throw"); }
+void __throw_underflow_error(const char*) { os::panic("throw"); }
 
-void __throw_ios_failure(const char*) { sysPanic("throw"); }
+void __throw_ios_failure(const char*) { os::panic("throw"); }
 
-void __throw_system_error(int) { sysPanic("throw"); }
+void __throw_system_error(int) { os::panic("throw"); }
 
-void __throw_future_error(int) { sysPanic("throw"); }
+void __throw_future_error(int) { os::panic("throw"); }
 
-void __throw_bad_function_call() { sysPanic("throw"); }
+void __throw_bad_function_call() { os::panic("throw"); }
 
 }
 
@@ -78,7 +78,7 @@ namespace __gnu_cxx
 
 void __verbose_terminate_handler()
 {
-    sysPanic("terminate");
+    os::panic("terminate");
 }
 
 }
@@ -122,11 +122,6 @@ void __cxa_guard_release (__guard* g)
 
 void __cxa_guard_abort (__guard*)
 {
-}
-
-void __cxa_pure_virtual()
-{
-    sysPanic("pure virtual");
 }
 
 }

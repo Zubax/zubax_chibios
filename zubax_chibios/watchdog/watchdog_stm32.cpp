@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <cassert>
 #include <hal.h>
-#include <zubax_chibios/watchdog.hpp>
 #include <zubax_chibios/os.hpp>
 
 #define KR_KEY_ACCESS   0x5555
@@ -77,9 +76,11 @@ void watchdogInit(void)
     _mask = 0;
     _num_watchdogs = 0;
 
+#ifdef DBGMCU_CR_DBG_IWDG_STOP
     chSysSuspend();
     DBGMCU->CR |= DBGMCU_CR_DBG_IWDG_STOP;
     chSysEnable();
+#endif
 }
 
 int watchdogCreate(unsigned timeout_ms)

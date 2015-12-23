@@ -4,59 +4,29 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
-#include "sys.h"
-#include <ch.h>
-#include <stdio.h>
+#include "sys.hpp"
+#include <ch.hpp>
 #include <unistd.h>
-#include <assert.h>
-#include <string.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cassert>
+#include <cstring>
+#include <cstdarg>
 
-__attribute__((weak))
-void *__dso_handle;
-
-__attribute__((weak))
-int __errno;
-
-void sysEmergencyPrint(const char* str);
-
-void zchSysHaltHook(const char* msg)
+namespace os
 {
-    sysApplicationHaltHook();
 
-    port_disable();
-    sysEmergencyPrint("\nPANIC [");
-    const thread_t *pthread = chThdGetSelfX();
-    if (pthread && pthread->p_name)
-    {
-        sysEmergencyPrint(pthread->p_name);
-    }
-    sysEmergencyPrint("] ");
+extern void emergencyPrint(const char* str);
 
-    if (msg != NULL)
-    {
-        sysEmergencyPrint(msg);
-    }
-    sysEmergencyPrint("\n");
-
-#if DEBUG_BUILD && defined(CoreDebug)
-    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
-    {
-        __asm volatile ("bkpt #0\n"); // Break into the debugger
-    }
-#endif
-}
-
-void sysPanic(const char* msg)
+void panic(const char* msg)
 {
     chSysHalt(msg);
     while (1) { }
 }
 
 __attribute__((weak))
-void sysApplicationHaltHook(void) { }
+void applicationHaltHook(void) { }
 
-void sysSleepUntilChTime(systime_t sleep_until)
+void sleepUntilChTime(systime_t sleep_until)
 {
     chSysLock();
     sleep_until -= chVTGetSystemTime();
@@ -73,6 +43,48 @@ void sysSleepUntilChTime(systime_t sleep_until)
     }
 #endif
 }
+
+} // namespace os
+
+extern "C"
+{
+
+__attribute__((weak))
+void *__dso_handle;
+
+__attribute__((weak))
+int __errno;
+
+
+void zchSysHaltHook(const char* msg)
+{
+    using namespace os;
+
+    applicationHaltHook();
+
+    port_disable();
+    emergencyPrint("\nPANIC [");
+    const thread_t *pthread = chThdGetSelfX();
+    if (pthread && pthread->p_name)
+    {
+        emergencyPrint(pthread->p_name);
+    }
+    emergencyPrint("] ");
+
+    if (msg != NULL)
+    {
+        emergencyPrint(msg);
+    }
+    emergencyPrint("\n");
+
+#if DEBUG_BUILD && defined(CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    {
+        __asm volatile ("bkpt #0\n"); // Break into the debugger
+    }
+#endif
+}
+
 
 static void reverse(char* s)
 {
@@ -124,7 +136,7 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
     unsigned pos = 0;
 
 #define APPEND_MSG(text) { \
-        (void)strncpy(ptr + pos, text, (size > pos) ? (size - pos) : 0); \
+        (void)std::strncpy(ptr + pos, text, (size > pos) ? (size - pos) : 0); \
         pos += strlen(text); \
     }
 
@@ -145,17 +157,6 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
     while (1) { }
 }
 
-void _exit(int status)
-{
-    (void) status;
-    chSysHalt("exit");
-    while (1) { }
-}
-
-pid_t _getpid(void) { return 1; }
-
-void _kill(pid_t id) { (void) id; }
-
 /// From unistd
 int usleep(useconds_t useconds)
 {
@@ -168,4 +169,6 @@ unsigned sleep(unsigned int seconds)
 {
     chThdSleepSeconds(seconds);
     return 0;
+}
+
 }

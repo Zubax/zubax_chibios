@@ -13,11 +13,24 @@
 
 #define USARTX GLUE(USART, SERIAL_CLI_PORT_NUMBER)
 
-void sysEmergencyPrint(const char* str)
+namespace os
+{
+
+void emergencyPrint(const char* str)
 {
     for (const char *p = str; *p; p++)
     {
+#ifdef USART_ISR_TXE
+        while (!(USARTX->ISR & USART_ISR_TXE)) { }
+#else
         while (!(USARTX->SR & USART_SR_TXE)) { }
+#endif
+#ifdef USART_TDR_TDR
+        USARTX->TDR = *p;
+#else
         USARTX->DR = *p;
+#endif
     }
+}
+
 }

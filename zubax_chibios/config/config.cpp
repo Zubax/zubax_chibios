@@ -19,7 +19,6 @@
 #include <cmath>
 #include <cstdint>
 #include <zubax_chibios/os.hpp>
-#include <zubax_chibios/config.hpp>
 
 #ifndef CONFIG_PARAMS_MAX
 #  define CONFIG_PARAMS_MAX     40
@@ -41,7 +40,7 @@ static int _num_params = 0;
 static std::uint32_t _layout_hash = 0;
 static bool _frozen = false;
 
-static Mutex _mutex;
+static mutex_t _mutex;
 
 
 static std::uint32_t crc32_step(std::uint32_t crc, std::uint8_t new_byte)
@@ -74,7 +73,7 @@ static bool isValid(const ConfigParam* descr, float value)
 {
     assert(descr);
 
-    if (!isfinite(value))
+    if (!std::isfinite(value))
     {
         return false;
     }
@@ -175,8 +174,6 @@ int configInit(void)
     ASSERT_ALWAYS(!_frozen);
     _frozen = true;
 
-    chMtxInit(&_mutex);
-
     // Read the layout hash
     std::uint32_t stored_layout_hash = 0xdeadbeef;
     int flash_res = configStorageRead(OFFSET_LAYOUT_HASH, &stored_layout_hash, 4);
@@ -257,20 +254,22 @@ int configSave(void)
         goto flash_error;
     }
 
-    // Write CRC
-    const int pool_len = _num_params * sizeof(_value_pool[0]);
-    const std::uint32_t true_crc = crc32(_value_pool, pool_len);
-    flash_res = configStorageWrite(OFFSET_CRC, &true_crc, 4);
-    if (flash_res)
     {
-        goto flash_error;
-    }
+        // Write CRC
+        const int pool_len = _num_params * sizeof(_value_pool[0]);
+        const std::uint32_t true_crc = crc32(_value_pool, pool_len);
+        flash_res = configStorageWrite(OFFSET_CRC, &true_crc, 4);
+        if (flash_res)
+        {
+            goto flash_error;
+        }
 
-    // Write Values
-    flash_res = configStorageWrite(OFFSET_VALUES, _value_pool, pool_len);
-    if (flash_res)
-    {
-        goto flash_error;
+        // Write Values
+        flash_res = configStorageWrite(OFFSET_VALUES, _value_pool, pool_len);
+        if (flash_res)
+        {
+            goto flash_error;
+        }
     }
 
     chMtxUnlock(&_mutex);
@@ -362,6 +361,6 @@ float configGet(const char* name)
     assert(index >= 0);
     const float val = (index < 0) ? nanf("") : _value_pool[index];
     chMtxUnlock(&_mutex);
-    assert(isfinite(val));
+    assert(std::isfinite(val));
     return val;
 }

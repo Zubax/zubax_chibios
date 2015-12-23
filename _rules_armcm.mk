@@ -6,10 +6,11 @@
 
 ZUBAX_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-CSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys_console.c                    \
-        $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.c
-
-CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/libstdcpp.cpp
+CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/libstdcpp.cpp                  \
+          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys_console.cpp                \
+          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.cpp                        \
+          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config.cpp                  \
+          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config_cli.cpp              \
 
 UINCDIR += $(ZUBAX_CHIBIOS_DIR)
 
