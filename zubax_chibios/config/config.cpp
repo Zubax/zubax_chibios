@@ -33,6 +33,12 @@ extern int configStorageErase(void);
 #define OFFSET_CRC              4
 #define OFFSET_VALUES           8
 
+
+static constexpr int InitCodeRestored       = 1;
+static constexpr int InitCodeLayoutMismatch = 2;
+static constexpr int InitCodeCRCMismatch    = 3;
+
+
 static const ConfigParam* _descr_pool[CONFIG_PARAMS_MAX];
 static float _value_pool[CONFIG_PARAMS_MAX];
 
@@ -96,7 +102,7 @@ static bool isValid(const ConfigParam* descr, float value)
             return false;
         }
     }
-        /* fallthrough */
+    /* no break */
     case CONFIG_TYPE_FLOAT:
     {
         if (value > descr->max || value < descr->min)
@@ -159,9 +165,8 @@ void configRegisterParam_(const ConfigParam* param)
     }
 }
 
-static void reinitializeDefaults(const char* reason)
+static void reinitializeDefaults()
 {
-    os::lowsyslog("Config: Initing defaults [%s]\n", reason);
     for (int i = 0; i < _num_params; i++)
     {
         _value_pool[i] = _descr_pool[i]->default_;
@@ -173,6 +178,8 @@ int configInit(void)
     ASSERT_ALWAYS(_num_params <= CONFIG_PARAMS_MAX);  // being paranoid
     ASSERT_ALWAYS(!_frozen);
     _frozen = true;
+
+    int retval = 0;
 
     // Read the layout hash
     std::uint32_t stored_layout_hash = 0xdeadbeef;
@@ -206,32 +213,32 @@ int configInit(void)
         // Reinitialize defaults if restored values are not valid or if CRC does not match
         if (true_crc == stored_crc)
         {
-            os::lowsyslog("Config: %i params restored\n", _num_params);
+            retval = InitCodeRestored;
             for (int i = 0; i < _num_params; i++)
             {
                 if (!isValid(_descr_pool[i], _value_pool[i]))
                 {
-                    os::lowsyslog("Config: Resetting param [%s]: %f --> %f\n",
-                                  _descr_pool[i]->name, _value_pool[i], _descr_pool[i]->default_);
                     _value_pool[i] = _descr_pool[i]->default_;
                 }
             }
         }
         else
         {
-            reinitializeDefaults("CRC");
+            reinitializeDefaults();
+            retval = InitCodeCRCMismatch;
         }
     }
     else
     {
-        reinitializeDefaults("Layout");
+        reinitializeDefaults();
+        retval = InitCodeLayoutMismatch;
     }
 
-    return 0;
+    return retval;
 
     flash_error:
     assert(flash_res);
-    reinitializeDefaults("Storage error");
+    reinitializeDefaults();
     return flash_res;
 }
 
