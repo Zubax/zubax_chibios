@@ -36,7 +36,7 @@ void sleepUntilChTime(systime_t sleep_until)
     }
     chSysUnlock();
 
-#if DEBUG_BUILD
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
     if (((int)sleep_until) < 0)
     {
         lowsyslog("%s: Lag %d ts\n", chThdGetSelfX()->p_name, (int)sleep_until);
@@ -77,7 +77,7 @@ void zchSysHaltHook(const char* msg)
     }
     emergencyPrint("\n");
 
-#if DEBUG_BUILD && defined(CoreDebug_DHCSR_C_DEBUGEN_Msk)
+#if defined(DEBUG_BUILD) && DEBUG_BUILD && defined(CoreDebug_DHCSR_C_DEBUGEN_Msk)
     if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     {
         __asm volatile ("bkpt #0\n"); // Break into the debugger
