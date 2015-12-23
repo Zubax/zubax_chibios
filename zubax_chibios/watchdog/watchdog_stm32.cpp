@@ -30,6 +30,7 @@ static unsigned _wdg_timeout_ms = 0;
 static std::uint32_t _mask __attribute__((section (".noinit")));
 static std::uint8_t _num_watchdogs __attribute__((section (".noinit")));
 
+static bool _triggered_reset = false;
 
 static void setTimeout(unsigned timeout_ms)
 {
@@ -65,9 +66,7 @@ void watchdogInit(void)
 
     if (RCC->CSR & RCC_CSR_IWDGRSTF)
     {
-        os::lowsyslog("Watchdog: RESET WAS TRIGGERED BY WATCHDOG\n");
-        os::lowsyslog("Watchdog: RCC_CSR=0x%08x\n", unsigned(RCC->CSR));
-        os::lowsyslog("Watchdog: LAST STATE: mask=0x%08x, num=%d\n", unsigned(_mask), _num_watchdogs);
+        _triggered_reset = true;
         chSysSuspend();
         RCC->CSR |= RCC_CSR_RMVF;
         chSysEnable();
@@ -81,6 +80,11 @@ void watchdogInit(void)
     DBGMCU->CR |= DBGMCU_CR_DBG_IWDG_STOP;
     chSysEnable();
 #endif
+}
+
+bool watchdogTriggeredLastReset(void)
+{
+    return _triggered_reset;
 }
 
 int watchdogCreate(unsigned timeout_ms)
@@ -106,7 +110,6 @@ int watchdogCreate(unsigned timeout_ms)
     {
         setTimeout(timeout_ms);
         _wdg_timeout_ms = timeout_ms;
-        os::lowsyslog("Watchdog: Global timeout %u ms\n", _wdg_timeout_ms);
     }
     return new_id;
 }

@@ -12,6 +12,8 @@ extern "C" {
 
 void watchdogInit(void);
 
+bool watchdogTriggeredLastReset(void);
+
 int watchdogCreate(int timeout_ms);
 
 void watchdogReset(int id);
