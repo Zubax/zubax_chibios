@@ -105,7 +105,7 @@ AOPT +=
 TOPT ?= -mthumb -DTHUMB=1
 
 CWARN += -Wall -Wextra -Wstrict-prototypes
-CPPWARN += -Wall -Wextra -Werror
+CPPWARN += -Wundef -Wall -Wextra -Werror
 
 # asm statement fix
 DDEFS += -Dasm=__asm
