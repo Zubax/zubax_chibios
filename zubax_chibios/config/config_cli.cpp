@@ -4,15 +4,13 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <zubax_chibios/config/cli.hpp>
-#include <zubax_chibios/config/config.hpp>
+#include <cstdio>
+#include <cstdlib>
+#include <cerrno>
+#include <cstring>
+#include <zubax_chibios/config.hpp>
 
-namespace zubax_chibios
+namespace os
 {
 namespace config
 {
@@ -29,7 +27,7 @@ static int printParam(const char* name, bool verbose)
             {
                 break;
             }
-            int len = int(strlen(nm));
+            int len = int(std::strlen(nm));
             if (len > _max_name_len)
             {
                 _max_name_len = len;
@@ -46,21 +44,21 @@ static int printParam(const char* name, bool verbose)
 
     if (par.type == CONFIG_TYPE_FLOAT)
     {
-        printf("%-*s = %-12f", _max_name_len, name, configGet(name));
+        std::printf("%-*s = %-12f", _max_name_len, name, configGet(name));
         if (verbose)
         {
-            printf("[%f, %f] (%f)", par.min, par.max, par.default_);
+            std::printf("[%f, %f] (%f)", par.min, par.max, par.default_);
         }
     }
     else
     {
-        printf("%-*s = %-12i", _max_name_len, name, (int)configGet(name));
+        std::printf("%-*s = %-12i", _max_name_len, name, (int)configGet(name));
         if (verbose)
         {
-            printf("[%i, %i] (%i)", (int)par.min, (int)par.max, (int)par.default_);
+            std::printf("[%i, %i] (%i)", (int)par.min, (int)par.max, (int)par.default_);
         }
     }
-    puts("");
+    std::puts("");
     return 0;
 }
 
@@ -68,7 +66,7 @@ int executeCliCommand(int argc, char *argv[])
 {
     const char* const command = (argc < 1) ? "" : argv[0];
 
-    if (!strcmp(command, "list"))
+    if (!std::strcmp(command, "list"))
     {
         for (int i = 0;; i++)
         {
@@ -85,28 +83,28 @@ int executeCliCommand(int argc, char *argv[])
         }
         return 0;
     }
-    else if (!strcmp(command, "save"))
+    else if (!std::strcmp(command, "save"))
     {
         return configSave();
     }
-    else if (!strcmp(command, "erase"))
+    else if (!std::strcmp(command, "erase"))
     {
         return configErase();
     }
-    else if (!strcmp(command, "get"))
+    else if (!std::strcmp(command, "get"))
     {
         if (argc < 2)
         {
-            puts("Error: Not enough arguments");
+            std::puts("Error: Not enough arguments");
             return -EINVAL;
         }
         return printParam(argv[1], false);
     }
-    else if (!strcmp(command, "set"))
+    else if (!std::strcmp(command, "set"))
     {
         if (argc < 3)
         {
-            puts("Error: Not enough arguments");
+            std::puts("Error: Not enough arguments");
             return -EINVAL;
         }
         const char* const name = argv[1];
@@ -120,14 +118,14 @@ int executeCliCommand(int argc, char *argv[])
     }
     else
     {
-        puts("Usage:\n"
-            "  cfg list\n"
-            "  cfg save\n"
-            "  cfg erase\n"
-            "  cfg get <name>\n"
-            "  cfg set <name> <value>\n"
-            "Note that save or erase may halt CPU for a few milliseconds which\n"
-            "can cause transient failures in real time tasks or communications.");
+        std::puts("Usage:\n"
+                  "  cfg list\n"
+                  "  cfg save\n"
+                  "  cfg erase\n"
+                  "  cfg get <name>\n"
+                  "  cfg set <name> <value>\n"
+                  "Note that save or erase may halt CPU for a few milliseconds which\n"
+                  "can cause transient failures in real time tasks or communications.");
     }
     return -EINVAL;
 }

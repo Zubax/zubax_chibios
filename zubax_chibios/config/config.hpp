@@ -9,7 +9,7 @@
 #include <type_traits>
 #include "config.h"
 
-namespace zubax_chibios
+namespace os
 {
 namespace config
 {
@@ -76,8 +76,13 @@ using Param = const typename _internal::Param<T>;
 
 static inline int init()
 {
-    return configInit();
+    return ::configInit();
 }
+
+/**
+ * Allows to read/modify/save/restore commands via CLI
+ */
+int executeCLICommand(int argc, char *argv[]);
 
 }
 }

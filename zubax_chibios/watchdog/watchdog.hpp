@@ -10,7 +10,7 @@
 #include <zubax_chibios/os.hpp>
 #include "watchdog.h"
 
-namespace zubax_chibios
+namespace os
 {
 namespace watchdog
 {

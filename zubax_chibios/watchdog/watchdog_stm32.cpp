@@ -7,7 +7,8 @@
 /*
  * This file was originally written in pure C99, but later it had to be migrated to C++.
  * In its current state it's kinda written in C99 with C++ features.
- * This is not a proper C++.
+ *
+ *                      This is not proper C++.
  */
 
 #include <cstdint>
@@ -65,17 +66,14 @@ void watchdogInit(void)
 
     if (RCC->CSR & RCC_CSR_IWDGRSTF)
     {
-        lowsyslog("Watchdog: RESET WAS CAUSED BY WATCHDOG TIMEOUT\n");
-        lowsyslog("Watchdog: RCC_CSR=0x%08x\n", (unsigned)RCC->CSR);
-        lowsyslog("Watchdog: LAST STATE: mask=0x%08x, num=%d\n", (unsigned int)_mask, _num_watchdogs);
+        os::lowsyslog("Watchdog: RESET WAS TRIGGERED BY WATCHDOG\n");
+        os::lowsyslog("Watchdog: RCC_CSR=0x%08x\n", unsigned(RCC->CSR));
+        os::lowsyslog("Watchdog: LAST STATE: mask=0x%08x, num=%d\n", unsigned(_mask), _num_watchdogs);
         chSysSuspend();
         RCC->CSR |= RCC_CSR_RMVF;
         chSysEnable();
     }
-    else
-    {
-        lowsyslog("Watchdog: Reset was not caused by watchdog, it's OK\n");
-    }
+
     _mask = 0;
     _num_watchdogs = 0;
 
@@ -107,7 +105,7 @@ int watchdogCreate(unsigned timeout_ms)
     {
         setTimeout(timeout_ms);
         _wdg_timeout_ms = timeout_ms;
-        lowsyslog("Watchdog: Global timeout set to %i ms\n", _wdg_timeout_ms);
+        os::lowsyslog("Watchdog: Global timeout %u ms\n", _wdg_timeout_ms);
     }
     return new_id;
 }
