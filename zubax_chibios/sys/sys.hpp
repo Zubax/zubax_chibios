@@ -6,7 +6,7 @@
 
 #pragma once
 
-#if !DEBUG_BUILD && !RELEASE_BUILD
+#if !defined(DEBUG_BUILD) && !defined(RELEASE_BUILD)
 #  error Either DEBUG_BUILD or RELEASE_BUILD must be defined
 #endif
 
@@ -14,16 +14,20 @@
 
 
 #ifndef STRINGIZE
-#  define STRINGIZE2(x)   #x
-#  define STRINGIZE(x)    STRINGIZE2(x)
+#  define STRINGIZE2(x)         #x
+#  define STRINGIZE(x)          STRINGIZE2(x)
 #endif
 
-#define MAKE_ASSERT_MSG_() __FILE__ ":" STRINGIZE(__LINE__)
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
+# define MAKE_ASSERT_MSG_(x)      (__FILE__ ":" STRINGIZE(__LINE__) ":" STRINGIZE(x))
+#else
+# define MAKE_ASSERT_MSG_(x)      (STRINGIZE(__LINE__) ":" STRINGIZE(x))
+#endif
 
 #define ASSERT_ALWAYS(x)                                    \
     do {                                                    \
         if ((x) == 0) {                                     \
-            chSysHalt(MAKE_ASSERT_MSG_());                  \
+            chSysHalt(MAKE_ASSERT_MSG_(x));                 \
         }                                                   \
     } while (0)
 
