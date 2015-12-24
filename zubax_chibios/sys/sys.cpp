@@ -12,6 +12,10 @@
 #include <cstring>
 #include <cstdarg>
 
+#if !CH_CFG_USE_REGISTRY
+# pragma message "CH_CFG_USE_REGISTRY is disabled, panic reports will be incomplete"
+#endif
+
 namespace os
 {
 
@@ -39,7 +43,12 @@ void sleepUntilChTime(systime_t sleep_until)
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
     if (((int)sleep_until) < 0)
     {
-        lowsyslog("%s: Lag %d ts\n", chThdGetSelfX()->p_name, (int)sleep_until);
+#if CH_CFG_USE_REGISTRY
+        const char* const name = chThdGetSelfX()->p_name;
+#else
+        const char* const name = "<?>";
+#endif
+        lowsyslog("%s: Lag %d ts\n", name, (int)sleep_until);
     }
 #endif
 }
@@ -64,11 +73,13 @@ void zchSysHaltHook(const char* msg)
 
     port_disable();
     emergencyPrint("\nPANIC [");
+#if CH_CFG_USE_REGISTRY
     const thread_t *pthread = chThdGetSelfX();
     if (pthread && pthread->p_name)
     {
         emergencyPrint(pthread->p_name);
     }
+#endif
     emergencyPrint("] ");
 
     if (msg != NULL)

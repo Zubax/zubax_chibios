@@ -24,35 +24,8 @@ extern void zchSysHaltHook(const char* reason);
 #define CH_CFG_SYSTEM_HALT_HOOK(reason)         zchSysHaltHook(reason)
 
 /*
- * Default overrides.
- */
-#ifndef CH_CFG_USE_TM
-#define CH_CFG_USE_TM                           FALSE
-#endif
-
-#ifndef CH_CFG_USE_MUTEXES_RECURSIVE
-#define CH_CFG_USE_MUTEXES_RECURSIVE            TRUE
-#endif
-
-#ifndef CH_CFG_USE_MEMPOOLS
-#define CH_CFG_USE_MEMPOOLS                     FALSE
-#endif
-
-#ifndef CH_CFG_USE_HEAP
-#define CH_CFG_USE_HEAP                         FALSE
-#endif
-
-#ifndef CH_CFG_USE_DYNAMIC
-#define CH_CFG_USE_DYNAMIC                      FALSE
-#endif
-
-/*
  * Debug support.
  */
-#ifndef CH_DBG_FILL_THREADS
-#define CH_DBG_FILL_THREADS                     TRUE
-#endif
-
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
 #   define CH_DBG_SYSTEM_STATE_CHECK            TRUE
 #   define CH_DBG_ENABLE_CHECKS                 TRUE
