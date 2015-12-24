@@ -11,6 +11,7 @@
 #endif
 
 #include <ch.hpp>
+#include "execute_once.hpp"
 
 
 #ifndef STRINGIZE
@@ -74,6 +75,13 @@ public:
     {
         mutex_.unlock();
     }
+};
+
+class CriticalSectionLocker
+{
+    const syssts_t st_ = chSysGetStatusAndLockX();
+public:
+    ~CriticalSectionLocker() { chSysRestoreStatusX(st_); }
 };
 
 }
