@@ -59,4 +59,21 @@ void sleepUntilChTime(systime_t sleep_until);
 __attribute__((noreturn))
 void panic(const char* msg);
 
+/**
+ * RAII wrappers
+ */
+class MutexLocker
+{
+    chibios_rt::Mutex& mutex_;
+public:
+    MutexLocker(chibios_rt::Mutex& m) : mutex_(m)
+    {
+        mutex_.lock();
+    }
+    ~MutexLocker()
+    {
+        mutex_.unlock();
+    }
+};
+
 }

@@ -46,7 +46,7 @@ static int _num_params = 0;
 static std::uint32_t _layout_hash = 0;
 static bool _frozen = false;
 
-static mutex_t _mutex;
+static chibios_rt::Mutex _mutex;
 
 
 static std::uint32_t crc32_step(std::uint32_t crc, std::uint8_t new_byte)
@@ -245,7 +245,7 @@ int configInit(void)
 int configSave(void)
 {
     ASSERT_ALWAYS(_frozen);
-    chMtxLock(&_mutex);
+    os::MutexLocker locker(_mutex);
 
     // Erase
     int flash_res = configStorageErase();
@@ -279,21 +279,18 @@ int configSave(void)
         }
     }
 
-    chMtxUnlock(&_mutex);
     return 0;
 
     flash_error:
     assert(flash_res);
-    chMtxUnlock(&_mutex);
     return flash_res;
 }
 
 int configErase(void)
 {
     ASSERT_ALWAYS(_frozen);
-    chMtxLock(&_mutex);
+    os::MutexLocker locker(_mutex);
     int res = configStorageErase();
-    chMtxUnlock(&_mutex);
     return res;
 }
 
@@ -312,7 +309,7 @@ int configSet(const char* name, float value)
 {
     int retval = 0;
     ASSERT_ALWAYS(_frozen);
-    chMtxLock(&_mutex);
+    os::MutexLocker locker(_mutex);
 
     const int index = indexByName(name);
     if (index < 0)
@@ -330,7 +327,6 @@ int configSet(const char* name, float value)
     _value_pool[index] = value;
 
     leave:
-    chMtxUnlock(&_mutex);
     return retval;
 }
 
@@ -344,7 +340,7 @@ int configGetDescr(const char* name, ConfigParam* out)
     }
 
     int retval = 0;
-    chMtxLock(&_mutex);
+    os::MutexLocker locker(_mutex);
 
     const int index = indexByName(name);
     if (index < 0)
@@ -356,18 +352,16 @@ int configGetDescr(const char* name, ConfigParam* out)
     *out = *_descr_pool[index];
 
     leave:
-    chMtxUnlock(&_mutex);
     return retval;
 }
 
 float configGet(const char* name)
 {
     ASSERT_ALWAYS(_frozen);
-    chMtxLock(&_mutex);
+    os::MutexLocker locker(_mutex);
     const int index = indexByName(name);
     assert(index >= 0);
     const float val = (index < 0) ? nanf("") : _value_pool[index];
-    chMtxUnlock(&_mutex);
     assert(std::isfinite(val));
     return val;
 }
