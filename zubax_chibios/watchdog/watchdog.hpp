@@ -47,5 +47,10 @@ static inline void init()
     ::watchdogInit();
 }
 
+static inline bool wasLastResetTriggeredByWatchdog()
+{
+    return ::watchdogTriggeredLastReset();
+}
+
 }
 }
