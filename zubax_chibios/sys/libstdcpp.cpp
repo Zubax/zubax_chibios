@@ -29,6 +29,16 @@ void operator delete[](void*)
     os::panic("delete");
 }
 
+void operator delete(void*, unsigned)
+{
+    os::panic("delete");
+}
+
+void operator delete[](void*, unsigned)
+{
+    os::panic("delete");
+}
+
 /*
  * stdlibc++ workaround.
  * Default implementations will throw, which causes code size explosion.
