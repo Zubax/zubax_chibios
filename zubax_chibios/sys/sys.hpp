@@ -60,28 +60,43 @@ void sleepUntilChTime(systime_t sleep_until);
 __attribute__((noreturn))
 void panic(const char* msg);
 
-/**
- * RAII wrappers
- */
-class MutexLocker
+
+namespace impl_
+{
+
+class MutexLockerImpl
 {
     chibios_rt::Mutex& mutex_;
 public:
-    MutexLocker(chibios_rt::Mutex& m) : mutex_(m)
+    MutexLockerImpl(chibios_rt::Mutex& m) : mutex_(m)
     {
         mutex_.lock();
     }
-    ~MutexLocker()
+    ~MutexLockerImpl()
     {
         mutex_.unlock();
     }
 };
 
-class CriticalSectionLocker
+class CriticalSectionLockerImpl
 {
-    const syssts_t st_ = chSysGetStatusAndLockX();
+    volatile const syssts_t st_ = chSysGetStatusAndLockX();
 public:
-    ~CriticalSectionLocker() { chSysRestoreStatusX(st_); }
+    ~CriticalSectionLockerImpl() { chSysRestoreStatusX(st_); }
 };
+
+} // namespace impl_
+
+/**
+ * RAII mutex locker.
+ * Must be volatile in order to prevent the optimizer from throwing it away.
+ */
+using MutexLocker = volatile impl_::MutexLockerImpl;
+
+/**
+ * RAII critical section locker.
+ * Must be volatile in order to prevent the optimizer from throwing it away.
+ */
+using CriticalSectionLocker = volatile impl_::CriticalSectionLockerImpl;
 
 }
