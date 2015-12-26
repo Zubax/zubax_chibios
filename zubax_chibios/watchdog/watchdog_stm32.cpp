@@ -16,6 +16,15 @@
 #include <hal.h>
 #include <zubax_chibios/os.hpp>
 
+#if !defined(DISABLE_WATCHDOG)
+# define DISABLE_WATCHDOG       0
+#endif
+#if DISABLE_WATCHDOG
+# if (defined(RELEASE_BUILD) && RELEASE_BUILD) || !(defined(DEBUG_BUILD) && DEBUG_BUILD)
+#  error "DISABLE_WATCHDOG is not permitted with release build"
+# endif
+#endif
+
 #define KR_KEY_ACCESS   0x5555
 #define KR_KEY_RELOAD   0xAAAA
 #define KR_KEY_ENABLE   0xCCCC
@@ -40,6 +49,9 @@ static void setTimeout(unsigned timeout_ms)
         timeout_ms = 1;
     }
 
+#if DISABLE_WATCHDOG
+# pragma message "WARNING: Watchdog is disabled!"
+#else
     unsigned reload_value = timeout_ms / 6;  // For 1/256 prescaler
     if (reload_value > MAX_RELOAD_VAL)
     {
@@ -56,6 +68,7 @@ static void setTimeout(unsigned timeout_ms)
     IWDG->RLR = reload_value;
     IWDG->KR = KR_KEY_RELOAD;
     IWDG->KR = KR_KEY_ENABLE; // Starts if wasn't running yet
+#endif
 }
 
 void watchdogInit(void)
