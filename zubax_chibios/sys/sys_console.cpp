@@ -18,10 +18,10 @@
 namespace os
 {
 
-static MUTEX_DECL(_mutex);  ///< Doesn't require initialization
-static char _buffer[256];
+static chibios_rt::Mutex mutex_;
+static char buffer_[256];
 
-static BaseSequentialStream* _stdout_stream = (BaseSequentialStream*)&STDOUT_SD;
+static BaseSequentialStream* stdout_stream_ = (BaseSequentialStream*)&STDOUT_SD;
 
 static void writeExpandingCrLf(BaseSequentialStream* stream, const char* str)
 {
@@ -37,11 +37,13 @@ static void writeExpandingCrLf(BaseSequentialStream* stream, const char* str)
 
 static void genericPrint(BaseSequentialStream* stream, const char* format, va_list vl)
 {
+    MutexLocker locker(mutex_);
+
     /*
      * Printing the string into the buffer using chvprintf()
      */
     MemoryStream ms;
-    msObjectInit(&ms, (uint8_t*)_buffer, sizeof(_buffer), 0);
+    msObjectInit(&ms, (uint8_t*)buffer_, sizeof(buffer_), 0);
 
     BaseSequentialStream* chp = (BaseSequentialStream*)&ms;
     chvprintf(chp, format, vl);
@@ -51,9 +53,7 @@ static void genericPrint(BaseSequentialStream* stream, const char* format, va_li
     /*
      * Writing the buffer replacing "\n" --> "\r\n"
      */
-    chMtxLock(&_mutex);
-    writeExpandingCrLf(stream, _buffer);
-    chMtxUnlock(&_mutex);
+    writeExpandingCrLf(stream, buffer_);
 }
 
 void lowsyslog(const char* format, ...)
@@ -67,7 +67,7 @@ void lowsyslog(const char* format, ...)
 
 void setStdOutStream(BaseSequentialStream* stream)
 {
-    _stdout_stream = stream;
+    stdout_stream_ = stream;
 }
 
 } // namespace os
@@ -81,23 +81,22 @@ int printf(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
-    genericPrint(_stdout_stream, format, vl);
+    genericPrint(stdout_stream_, format, vl);
     va_end(vl);
     return std::strlen(format);   // This is not standard compliant, but ain't nobody cares about what printf() returns
 }
 
 int vprintf(const char* format, va_list vl)
 {
-    genericPrint(_stdout_stream, format, vl);
+    genericPrint(stdout_stream_, format, vl);
     return std::strlen(format);
 }
 
 int puts(const char* str)
 {
-    chMtxLock(&_mutex);
-    writeExpandingCrLf(_stdout_stream, str);
-    writeExpandingCrLf(_stdout_stream, "\n");
-    chMtxUnlock(&_mutex);
+    MutexLocker locker(mutex_);
+    writeExpandingCrLf(stdout_stream_, str);
+    writeExpandingCrLf(stdout_stream_, "\n");
     return std::strlen(str) + 2;
 }
 
