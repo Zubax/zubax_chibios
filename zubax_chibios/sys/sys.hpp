@@ -54,6 +54,11 @@ void setStdOutStream(::BaseChannel* stream, unsigned byte_write_timeout_msec = D
 ::BaseChannel* getStdOutStream();
 
 /**
+ * Provides access to the stdout mutex.
+ */
+chibios_rt::Mutex& getStdOutMutex();
+
+/**
  * Emergency termination hook that can be overriden by the application.
  * The hook must return immediately after bringing the hardware into a safe state.
  */

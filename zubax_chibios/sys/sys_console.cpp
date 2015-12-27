@@ -95,6 +95,11 @@ void setStdOutStream(::BaseChannel* stream, unsigned byte_write_timeout_msec)
     return stdout_stream_;
 }
 
+chibios_rt::Mutex& getStdOutMutex()
+{
+    return mutex_;
+}
+
 } // namespace os
 
 extern "C"
