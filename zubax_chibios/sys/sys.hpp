@@ -11,6 +11,7 @@
 #endif
 
 #include <ch.hpp>
+#include <hal.h>
 #include "execute_once.hpp"
 
 
@@ -34,20 +35,27 @@
 
 namespace os
 {
+
+static constexpr unsigned DefaultStdOutByteWriteTimeoutMSec = 1;
+
 /**
  * NuttX-like console print; should be used instead of printf()/chprintf()
+ * This function always outputs into the debug UART regardless of the current stdout configuration.
  * TODO: use type safe version based on variadic templates.
  */
 __attribute__ ((format (printf, 1, 2)))
 void lowsyslog(const char* format, ...);
 
 /**
- * Changes current stdout stream.
+ * Changes current stdout stream and its write timeout.
+ * This setting does not affect @ref lowsyslog().
  */
-void setStdOutStream(BaseSequentialStream* stream);
+void setStdOutStream(::BaseChannel* stream, unsigned byte_write_timeout_msec = DefaultStdOutByteWriteTimeoutMSec);
+::BaseChannel* getStdOutStream();
 
 /**
  * Emergency termination hook that can be overriden by the application.
+ * The hook must return immediately after bringing the hardware into a safe state.
  */
 extern void applicationHaltHook(void);
 
