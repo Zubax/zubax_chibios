@@ -21,12 +21,6 @@ namespace os
 
 extern void emergencyPrint(const char* str);
 
-void panic(const char* msg)
-{
-    chSysHalt(msg);
-    while (1) { }
-}
-
 __attribute__((weak))
 void applicationHaltHook(void) { }
 
@@ -189,19 +183,19 @@ void* malloc(size_t sz)
 
 void* calloc(size_t, size_t)
 {
-    os::panic("calloc");
+    chSysHalt("calloc");
     return nullptr;
 }
 
 void* realloc(void*, size_t)
 {
-    os::panic("realloc");
+    chSysHalt("realloc");
     return nullptr;
 }
 
 void free(void*)
 {
-    os::panic("free");
+    chSysHalt("free");
 }
 
 }

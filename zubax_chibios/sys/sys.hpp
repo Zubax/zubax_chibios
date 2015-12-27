@@ -65,9 +65,6 @@ extern void applicationHaltHook(void);
  */
 void sleepUntilChTime(systime_t sleep_until);
 
-__attribute__((noreturn))
-void panic(const char* msg);
-
 
 namespace impl_
 {
