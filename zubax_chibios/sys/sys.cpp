@@ -33,7 +33,7 @@ void applicationHaltHook(void) { }
 void sleepUntilChTime(systime_t sleep_until)
 {
     chSysLock();
-    sleep_until -= chVTGetSystemTime();
+    sleep_until -= chVTGetSystemTimeX();
     if (((int)sleep_until) > 0)
     {
         chThdSleepS(sleep_until);
