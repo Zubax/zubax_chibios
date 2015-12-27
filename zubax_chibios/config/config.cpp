@@ -48,6 +48,8 @@ static bool _frozen = false;
 
 static chibios_rt::Mutex _mutex;
 
+static unsigned _modification_cnt = 0;
+
 
 static std::uint32_t crc32_step(std::uint32_t crc, std::uint8_t new_byte)
 {
@@ -324,10 +326,16 @@ int configSet(const char* name, float value)
         goto leave;
     }
 
+    _modification_cnt += 1;
     _value_pool[index] = value;
 
     leave:
     return retval;
+}
+
+unsigned configGetModificationCounter()
+{
+    return _modification_cnt;           // Atomic access
 }
 
 int configGetDescr(const char* name, ConfigParam* out)

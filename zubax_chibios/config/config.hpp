@@ -79,6 +79,11 @@ static inline int init()
     return ::configInit();
 }
 
+static inline unsigned getModificationCounter()
+{
+    return ::configGetModificationCounter();
+}
+
 /**
  * Allows to read/modify/save/restore commands via CLI
  */

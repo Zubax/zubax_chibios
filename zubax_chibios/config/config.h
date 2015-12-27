@@ -89,6 +89,13 @@ const char* configNameByIndex(int index);
 int configSet(const char* name, float value);
 
 /**
+ * Returns the number of times configSet() was executed successfully.
+ * The returned value can only grow (with overflow).
+ * This value can be used to reload changed parameter values in the background.
+ */
+unsigned configGetModificationCounter(void);
+
+/**
  * @param [in]  name Parameter name
  * @param [out] out  Parameter descriptor
  * @return Returns 0 if the parameter does exist, negative errno otherwise.
