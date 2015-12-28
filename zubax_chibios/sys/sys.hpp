@@ -36,7 +36,7 @@
 namespace os
 {
 
-static constexpr unsigned DefaultStdOutByteWriteTimeoutMSec = 1;
+static constexpr unsigned DefaultStdIOByteWriteTimeoutMSec = 1;
 
 /**
  * NuttX-like console print; should be used instead of printf()/chprintf()
@@ -50,13 +50,13 @@ void lowsyslog(const char* format, ...);
  * Changes current stdout stream and its write timeout.
  * This setting does not affect @ref lowsyslog().
  */
-void setStdOutStream(::BaseChannel* stream, unsigned byte_write_timeout_msec = DefaultStdOutByteWriteTimeoutMSec);
-::BaseChannel* getStdOutStream();
+void setStdIOStream(::BaseChannel* stream, unsigned byte_write_timeout_msec = DefaultStdIOByteWriteTimeoutMSec);
+::BaseChannel* getStdIOStream();
 
 /**
  * Provides access to the stdout mutex.
  */
-chibios_rt::Mutex& getStdOutMutex();
+chibios_rt::Mutex& getStdIOMutex();
 
 /**
  * Emergency termination hook that can be overriden by the application.

@@ -79,23 +79,23 @@ void lowsyslog(const char* format, ...)
 }
 
 
-static unsigned stdout_byte_write_timeout_msec_ = DefaultStdOutByteWriteTimeoutMSec;
-static ::BaseChannel* stdout_stream_ = (::BaseChannel*)&STDOUT_SD;
+static unsigned stdio_byte_write_timeout_msec_ = DefaultStdIOByteWriteTimeoutMSec;
+static ::BaseChannel* stdio_stream_ = (::BaseChannel*)&STDOUT_SD;
 
-void setStdOutStream(::BaseChannel* stream, unsigned byte_write_timeout_msec)
+void setStdIOStream(::BaseChannel* stream, unsigned byte_write_timeout_msec)
 {
     MutexLocker locker(mutex_);
     assert(stream != nullptr);
-    stdout_stream_ = stream;
-    stdout_byte_write_timeout_msec_ = byte_write_timeout_msec;
+    stdio_stream_ = stream;
+    stdio_byte_write_timeout_msec_ = byte_write_timeout_msec;
 }
 
-::BaseChannel* getStdOutStream()
+::BaseChannel* getStdIOStream()
 {
-    return stdout_stream_;
+    return stdio_stream_;
 }
 
-chibios_rt::Mutex& getStdOutMutex()
+chibios_rt::Mutex& getStdIOMutex()
 {
     return mutex_;
 }
@@ -111,21 +111,21 @@ int printf(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
-    int ret = genericPrint(stdout_stream_, stdout_byte_write_timeout_msec_, format, vl);
+    int ret = genericPrint(stdio_stream_, stdio_byte_write_timeout_msec_, format, vl);
     va_end(vl);
     return ret;
 }
 
 int vprintf(const char* format, va_list vl)
 {
-    return genericPrint(stdout_stream_, stdout_byte_write_timeout_msec_, format, vl);
+    return genericPrint(stdio_stream_, stdio_byte_write_timeout_msec_, format, vl);
 }
 
 int puts(const char* str)
 {
     MutexLocker locker(mutex_);
-    int ret = writeExpandingCrLf(stdout_stream_, stdout_byte_write_timeout_msec_, str);
-    ret += writeExpandingCrLf(stdout_stream_, stdout_byte_write_timeout_msec_, "\n");
+    int ret = writeExpandingCrLf(stdio_stream_, stdio_byte_write_timeout_msec_, str);
+    ret += writeExpandingCrLf(stdio_stream_, stdio_byte_write_timeout_msec_, "\n");
     return ret;
 }
 
