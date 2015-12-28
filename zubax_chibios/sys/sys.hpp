@@ -23,7 +23,7 @@
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
 # define MAKE_ASSERT_MSG_(x)      (__FILE__ ":" STRINGIZE(__LINE__) ":" STRINGIZE(x))
 #else
-# define MAKE_ASSERT_MSG_(x)      (STRINGIZE(__LINE__) ":" STRINGIZE(x))
+# define MAKE_ASSERT_MSG_(x)      (STRINGIZE(__LINE__))
 #endif
 
 #define ASSERT_ALWAYS(x)                                    \
