@@ -1,8 +1,8 @@
 #!/bin/sh
 #
-# Copyright (c) 2014 Courierdrone, courierdrone.com
+# Copyright (c) 2015 Zubax Robotics, zubax.com
 # Distributed under the MIT License, available in the file LICENSE.
-# Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+# Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
 # Find the firmware ELF
