@@ -194,9 +194,15 @@ void* realloc(void*, size_t)
     return nullptr;
 }
 
-void free(void*)
+void free(void* p)
 {
-    chSysHalt("free");
+    /*
+     * Certain stdlib functions, like mktime(), may call free() with zero argument, which can be safely ignored.
+     */
+    if (p != nullptr)
+    {
+        chSysHalt("free");
+    }
 }
 
 }
