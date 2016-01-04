@@ -43,7 +43,8 @@ void sleepUntilChTime(systime_t sleep_until)
 #else
         const char* const name = "<?>";
 #endif
-        lowsyslog("%s: Lag %d ts\n", name, (int)sleep_until);
+        lowsyslog("%s: Lag %d ts\n", name,
+                  static_cast<int>(static_cast<std::make_signed<systime_t>::type>(sleep_until)));
     }
 #endif
 }
