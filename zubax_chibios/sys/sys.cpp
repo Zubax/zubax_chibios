@@ -29,7 +29,7 @@ void sleepUntilChTime(systime_t sleep_until)
 {
     chSysLock();
     sleep_until -= chVTGetSystemTimeX();
-    if (((int)sleep_until) > 0)
+    if (static_cast<std::make_signed<systime_t>::type>(sleep_until) > 0)
     {
         chThdSleepS(sleep_until);
     }
