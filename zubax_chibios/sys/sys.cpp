@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstring>
 #include <cstdarg>
+#include <type_traits>
 
 #if !CH_CFG_USE_REGISTRY
 # pragma message "CH_CFG_USE_REGISTRY is disabled, panic reports will be incomplete"
@@ -35,7 +36,7 @@ void sleepUntilChTime(systime_t sleep_until)
     chSysUnlock();
 
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
-    if (((int)sleep_until) < 0)
+    if (static_cast<std::make_signed<systime_t>::type>(sleep_until) < 0)
     {
 #if CH_CFG_USE_REGISTRY
         const char* const name = chThdGetSelfX()->p_name;
