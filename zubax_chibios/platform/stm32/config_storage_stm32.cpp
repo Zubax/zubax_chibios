@@ -34,7 +34,7 @@
 #if defined(STM32F10X_HD) || defined(STM32F10X_HD_VL) || defined(STM32F10X_CL) || defined(STM32F10X_XL)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7E0))
 # define FLASH_PAGE_SIZE        0x800
-#elif defined(STM32F042x6)
+#elif defined(STM32F042x6) || defined(STM32F072xB)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
 # define FLASH_PAGE_SIZE        0x400
 #else
