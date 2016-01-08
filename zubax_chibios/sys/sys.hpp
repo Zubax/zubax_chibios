@@ -38,6 +38,13 @@
 #define UNLIKELY(x)     (__builtin_expect((x), false))
 
 
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
+# define DEBUG_LOG(...)         ::os::lowsyslog(__VA_ARGS__)
+#else
+# define DEBUG_LOG(...)         ((void)0)
+#endif
+
+
 namespace os
 {
 
