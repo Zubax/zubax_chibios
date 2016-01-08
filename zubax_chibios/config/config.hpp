@@ -66,6 +66,21 @@ struct Param<bool> : public ::ConfigParam
 
     bool get() const { return ::configGet(name) != 0; }
     operator bool() const { return get(); }
+
+    int set(bool value) const
+    {
+        return ::configSet(name, float(value));
+    }
+
+    int setAndSave(bool value) const
+    {
+        const int res = set(value);
+        if (res < 0)
+        {
+            return res;
+        }
+        return ::configSave();
+    }
 };
 
 }
