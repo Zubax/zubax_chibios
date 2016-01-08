@@ -36,6 +36,21 @@ struct Param : public ::ConfigParam
 
     T get() const { return T(::configGet(name)); }
 
+    int set(const T& value) const
+    {
+        return ::configSet(name, float(value));
+    }
+
+    int setAndSave(const T& value) const
+    {
+        const int res = set(value);
+        if (res < 0)
+        {
+            return res;
+        }
+        return ::configSave();
+    }
+
     bool isMax() const { return get() >= T(::ConfigParam::max); }
     bool isMin() const { return get() <= T(::ConfigParam::min); }
 };
