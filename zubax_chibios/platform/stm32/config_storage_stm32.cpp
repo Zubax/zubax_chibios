@@ -28,8 +28,14 @@
  */
 
 #define RDP_KEY                 0x00A5
-#define FLASH_KEY1              0x45670123
-#define FLASH_KEY2              0xCDEF89AB
+#if !defined(FLASH_KEY1)
+# define FLASH_KEY1             0x45670123
+# define FLASH_KEY2             0xCDEF89AB
+#endif
+
+#if !defined(FLASH_SR_WRPRTERR) // Compatibility
+# define FLASH_SR_WRPRTERR      FLASH_SR_WRPERR
+#endif
 
 #if defined(STM32F10X_HD) || defined(STM32F10X_HD_VL) || defined(STM32F10X_CL) || defined(STM32F10X_XL)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7E0))
@@ -37,6 +43,9 @@
 #elif defined(STM32F042x6) || defined(STM32F072xB)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
 # define FLASH_PAGE_SIZE        0x400
+#elif defined(STM32F373xC)
+# define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
+# define FLASH_PAGE_SIZE        0x800
 #else
 # error Unknown device.
 #endif
