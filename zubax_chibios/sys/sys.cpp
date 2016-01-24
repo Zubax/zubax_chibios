@@ -92,40 +92,6 @@ void zchSysHaltHook(const char* msg)
 #endif
 }
 
-
-static void reverse(char* s)
-{
-    for (int i = 0, j = strlen(s) - 1; i < j; i++, j--)
-    {
-        const char c = s[i];
-        s[i] = s[j];
-        s[j] = c;
-    }
-}
-
-char* itoa(int n, char* pbuf)
-{
-    const int sign = n;
-    if (sign < 0)
-    {
-        n = -n;
-    }
-    unsigned i = 0;
-    do
-    {
-        pbuf[i++] = n % 10 + '0';
-    }
-    while ((n /= 10) > 0);
-    if (sign < 0)
-    {
-        pbuf[i++] = '-';
-    }
-    pbuf[i] = '\0';
-    reverse(pbuf);
-    return pbuf;
-}
-
-
 void __assert_func(const char* file, int line, const char* func, const char* expr)
 {
     (void)file;
@@ -134,8 +100,7 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
     (void)expr;
     port_disable();
 
-    char line_buf[11];
-    itoa(line, line_buf);
+    const auto line_str = os::uintToString(unsigned(line));
 
     char buf[256]; // We don't care about possible stack overflow because we're going to die anyway
     char* ptr = buf;
@@ -149,7 +114,7 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
 
     APPEND_MSG(file);
     APPEND_MSG(":");
-    APPEND_MSG(line_buf);
+    APPEND_MSG(line_str.c_str());
     if (func != NULL)
     {
         APPEND_MSG(" ");

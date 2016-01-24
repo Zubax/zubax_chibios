@@ -12,6 +12,7 @@
 
 #include <ch.hpp>
 #include <hal.h>
+#include <type_traits>
 #include "execute_once.hpp"
 
 
@@ -120,5 +121,24 @@ using MutexLocker = volatile impl_::MutexLockerImpl;
  * Must be volatile in order to prevent the optimizer from throwing it away.
  */
 using CriticalSectionLocker = volatile impl_::CriticalSectionLockerImpl;
+
+/**
+ * Converts any unsigned integer to string and returns it by value.
+ * The argument must be unsigned, otherwise the call will be rejected by SFINAE.
+ */
+template <typename T, typename std::enable_if<std::is_unsigned<T>::value>::type...>
+inline auto uintToString(T num)
+{
+    struct
+    {
+        char storage_[22];                                      // len(str(2**64)) + 1
+        char* begin_ptr_ = &storage_[0] + sizeof(storage_) - 1;
+        const char* c_str() const { return begin_ptr_; }
+        operator const char* () const { return this->c_str(); }
+    } container;
+    *container.begin_ptr_ = '\0';
+    do { *--container.begin_ptr_ = char(num % 10U + 0x30U); } while (num /= 10U);
+    return container;
+};
 
 }
