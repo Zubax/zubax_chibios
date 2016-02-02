@@ -132,6 +132,8 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
 /// From unistd
 int usleep(useconds_t useconds)
 {
+    assert((((uint64_t)useconds * (uint64_t)CH_CFG_ST_FREQUENCY + 999999ULL) / 1000000ULL)
+           < (1ULL << CH_CFG_ST_RESOLUTION));
     chThdSleepMicroseconds(useconds);
     return 0;
 }
@@ -139,6 +141,7 @@ int usleep(useconds_t useconds)
 /// From unistd
 unsigned sleep(unsigned int seconds)
 {
+    assert(((uint64_t)seconds * (uint64_t)CH_CFG_ST_FREQUENCY) < (1ULL << CH_CFG_ST_RESOLUTION));
     chThdSleepSeconds(seconds);
     return 0;
 }
