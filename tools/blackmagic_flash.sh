@@ -20,7 +20,7 @@ fi
 
 arm-none-eabi-size $elf || exit 1
 
-tmpfile=$(tempfile)
+tmpfile=$(mktemp)
 cat > $tmpfile <<EOF
 target extended-remote $PORT
 mon swdp_scan
