@@ -5,8 +5,8 @@
 # Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
-PORT=${1:-'/dev/ttyACM0'}
-#/dev/serial/by-id/usb-Black_Sphere_Technologies_Black_Magic_Probe_DDE578CC-if00
+BM_DEV=$(readlink -f /dev/serial/by-id/usb-Black_Sphere_Technologies_Black_Magic_Probe_*-if00)
+PORT=${1:-$BM_DEV}
 
 # Find the firmware ELF
 elf=$(ls -1 ../../build/*.elf)
@@ -20,7 +20,7 @@ fi
 
 arm-none-eabi-size $elf || exit 1
 
-tmpfile=$(tempfile)
+tmpfile=$(mktemp)
 cat > $tmpfile <<EOF
 target extended-remote $PORT
 mon swdp_scan
