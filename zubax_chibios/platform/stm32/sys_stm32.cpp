@@ -34,3 +34,33 @@ void emergencyPrint(const char* str)
 }
 
 }
+
+extern "C"
+{
+
+void NMI_Handler(void)
+{
+    chSysHalt("NMI");
+}
+
+void HardFault_Handler(void)
+{
+    chSysHalt("HardFault");
+}
+
+void MemManage_Handler(void)
+{
+    chSysHalt("MemManage");
+}
+
+void BusFault_Handler(void)
+{
+    chSysHalt("BusFault");
+}
+
+void UsageFault_Handler(void)
+{
+    chSysHalt("UsageFault");
+}
+
+}
