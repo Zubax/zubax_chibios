@@ -83,6 +83,16 @@ extern void applicationHaltHook(void);
  */
 void sleepUntilChTime(systime_t sleep_until);
 
+/**
+ * After this function is invoked, @ref isRebootRequested() will be returning true.
+ */
+void requestReboot();
+
+/**
+ * Returns true if the application must reboot.
+ */
+bool isRebootRequested();
+
 
 namespace impl_
 {

@@ -49,6 +49,18 @@ void sleepUntilChTime(systime_t sleep_until)
 #endif
 }
 
+static bool reboot_request_flag = false;
+
+void requestReboot()
+{
+    reboot_request_flag = true;
+}
+
+bool isRebootRequested()
+{
+    return reboot_request_flag;
+}
+
 } // namespace os
 
 extern "C"
