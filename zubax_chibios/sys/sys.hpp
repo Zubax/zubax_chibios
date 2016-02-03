@@ -49,7 +49,7 @@
 namespace os
 {
 
-static constexpr unsigned DefaultStdIOByteWriteTimeoutMSec = 1;
+static constexpr unsigned DefaultStdIOByteWriteTimeoutMSec = 2;		///< Enough for 115200 baud and higher
 
 /**
  * NuttX-like console print; should be used instead of printf()/chprintf()
