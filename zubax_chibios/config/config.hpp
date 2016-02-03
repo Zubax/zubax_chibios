@@ -21,13 +21,12 @@ struct Param : public ::ConfigParam
 {
     static_assert(std::is_floating_point<T>() || std::is_integral<T>(), "One does not simply use T here");
 
-    Param(const char* name, T default_, T min, T max)
-    : ConfigParam
+    Param(const char* arg_name, T arg_default, T arg_min, T arg_max) : ConfigParam
     {
-        name,
-        float(default_),
-        float(min),
-        float(max),
+        arg_name,
+        float(arg_default),
+        float(arg_min),
+        float(arg_max),
         std::is_floating_point<T>() ? CONFIG_TYPE_FLOAT : CONFIG_TYPE_INT
     }
     {
@@ -58,8 +57,14 @@ struct Param : public ::ConfigParam
 template <>
 struct Param<bool> : public ::ConfigParam
 {
-    Param(const char* name, bool default_)
-    : ConfigParam{name, default_ ? 1.F : 0.F, 0.F, 1.F, CONFIG_TYPE_BOOL}
+    Param(const char* arg_name, bool arg_default) : ConfigParam
+    {
+        arg_name,
+        arg_default ? 1.F : 0.F,
+        0.F,
+        1.F,
+        CONFIG_TYPE_BOOL
+    }
     {
         ::configRegisterParam_(this);
     }
