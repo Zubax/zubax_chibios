@@ -24,6 +24,10 @@
 #  define CONFIG_PARAMS_MAX     40
 #endif
 
+#ifndef CONFIG_PARAM_MAX_NAME_LENGTH
+#  define CONFIG_PARAM_MAX_NAME_LENGTH     92    // UAVCAN compliant
+#endif
+
 extern int configStorageRead(unsigned offset, void* data, unsigned len);
 extern int configStorageWrite(unsigned offset, const void* data, unsigned len);
 extern int configStorageErase(void);
@@ -82,6 +86,11 @@ static bool isValid(const ConfigParam* descr, float value)
     assert(descr);
 
     if (!std::isfinite(value))
+    {
+        return false;
+    }
+
+    if (std::strlen(descr->name) > CONFIG_PARAM_MAX_NAME_LENGTH)
     {
         return false;
     }
