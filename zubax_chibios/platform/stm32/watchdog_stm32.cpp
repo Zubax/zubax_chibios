@@ -80,9 +80,11 @@ void watchdogInit(void)
     if (RCC->CSR & RCC_CSR_IWDGRSTF)
     {
         _triggered_reset = true;
+#if !defined(WATCHDOG_RETAIN_RESET_CAUSE_CODE)
         chSysSuspend();
         RCC->CSR |= RCC_CSR_RMVF;
         chSysEnable();
+#endif
     }
 
     _mask = 0;
