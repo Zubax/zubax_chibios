@@ -44,7 +44,7 @@ from io import BytesIO
 
 class AppDescriptor(object):
     """
-    UAVCAN firmware image descriptor format:
+    Brickproof bootloader firmware image descriptor format:
     uint64_t signature (bytes [7:0] set to 'APDesc00' by linker script)
     uint64_t image_crc (set to 0 by linker script)
     uint32_t image_size (set to 0 by linker script)
@@ -251,10 +251,10 @@ if __name__ == "__main__":
         parser.error("Invalid usage")
 
     with FirmwareImage(args[0], "rb") as in_image:
-        out_file = '%s-%s-%s.%s.%x.uavcan.bin' % (args[1], args[2],
-                                                  in_image.app_descriptor.version_major,
-                                                  in_image.app_descriptor.version_minor,
-                                                  in_image.app_descriptor.vcs_commit)
+        out_file = '%s-%s-%s.%s.%x.application.bin' % (args[1], args[2],
+                                                       in_image.app_descriptor.version_major,
+                                                       in_image.app_descriptor.version_minor,
+                                                       in_image.app_descriptor.vcs_commit)
         with FirmwareImage(out_file, "wb") as out_image:
             image = in_image.read()
             out_image.write(image)
