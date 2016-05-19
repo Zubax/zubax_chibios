@@ -12,6 +12,10 @@
 #include <cstring>
 #include <cstdint>
 
+#if !defined(FLASH_SR_WRPRTERR)
+# define FLASH_SR_WRPRTERR      FLASH_SR_WRPERR
+#endif
+
 namespace os
 {
 namespace stm32
@@ -31,7 +35,7 @@ class FlashWriter
             assert(!(FLASH->SR & FLASH_SR_WRPRTERR));
         }
         while (FLASH->SR & FLASH_SR_BSY);
-        FLASH->SR |= FLASH_SR_EOP;
+        FLASH->SR |= FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR;         // Reset flags
     }
 
     struct Prologuer
@@ -45,7 +49,7 @@ class FlashWriter
                 FLASH->KEYR = 0x45670123UL;
                 FLASH->KEYR = 0xCDEF89ABUL;
             }
-            FLASH->SR |= FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR; // Reset flags
+            FLASH->SR |= FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR;     // Reset flags
             FLASH->CR = 0;
         }
 
@@ -91,6 +95,22 @@ public:
         FLASH->CR = 0;
 
         return std::memcmp(what, where, how_much) == 0;
+    }
+
+    /**
+     * Erases the page located at the specified address.
+     */
+    bool erasePageAt(const unsigned page_address)
+    {
+        Prologuer prologuer;
+
+        FLASH->CR = FLASH_CR_PER;
+        FLASH->AR = page_address;
+        FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
+        waitReady();
+        FLASH->CR = 0;
+
+        return true;
     }
 };
 
