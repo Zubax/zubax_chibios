@@ -19,6 +19,8 @@
 #include <cassert>
 #include <zubax_chibios/os.hpp>
 
+namespace os
+{
 namespace shell
 {
 /**
@@ -365,4 +367,5 @@ public:
     }
 };
 
+}
 }
