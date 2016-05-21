@@ -43,4 +43,4 @@ echo -e "\rwait\r" > $port
 echo -e "\rdownload\r" > $port
 
 echo "Starting YMODEM sender..."
-sz -vv --ymodem $file > $port < $port
+sz -vv --ymodem --1k $file > $port < $port
