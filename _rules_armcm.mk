@@ -9,9 +9,7 @@ ZUBAX_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 # TODO: make configs optional too
 CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/libstdcpp.cpp                  \
           $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys_console.cpp                \
-          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.cpp                        \
-          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config.cpp                  \
-          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config_cli.cpp              \
+          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.cpp
 
 UINCDIR += $(ZUBAX_CHIBIOS_DIR)
 
@@ -20,6 +18,12 @@ UDEFS +=
 #
 # Optional components
 #
+
+BUILD_CONFIG ?= 0
+ifneq ($(BUILD_CONFIG),0)
+    CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config.cpp              \
+              $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config_cli.cpp
+endif
 
 BUILD_BOOTLOADER ?= 0
 ifneq ($(BUILD_BOOTLOADER),0)
@@ -51,7 +55,6 @@ include $(CHIBIOS)/os/various/cpp_wrappers/chcpp.mk
 
 
 VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c            \
-             $(CHIBIOS)/os/various/shell.c               \
              $(CHIBIOS)/os/hal/lib/streams/chprintf.c    \
              $(CHIBIOS)/os/hal/lib/streams/memstreams.c
 
@@ -63,6 +66,15 @@ ASMSRC += $(STARTUPASM) $(PORTASM) $(OSALASM)
 
 INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPINC) $(OSALINC) \
           $(CHIBIOS)/os/various $(CHIBIOS)/os/hal/lib/streams
+
+#
+# OS optional components
+#
+
+BUILD_CHIBIOS_SHELL ?= 0
+ifneq ($(BUILD_CHIBIOS_SHELL),0)
+    VARIOUSSRC += $(CHIBIOS)/os/various/shell.c
+endif
 
 #
 # Build configuration
