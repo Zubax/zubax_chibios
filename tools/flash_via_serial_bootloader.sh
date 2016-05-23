@@ -52,7 +52,6 @@ stty -F $port 115200
 # Starting the bootloader
 echo "Configuring the device..."
 echo -e "\rbootloader\r" > $port
-echo -e "\r_bootloader\r" > $port
 sleep 3
 
 # Re-detecting the serial port, because if it is a USB CDC ACM port, it will re-appear, likely under a different name
