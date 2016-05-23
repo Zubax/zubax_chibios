@@ -123,6 +123,8 @@ public:
  */
 class Bootloader
 {
+    static constexpr unsigned DefaultBootDelayMSec = 3000;
+
     State state_;
     IAppStorageBackend& backend_;
 
@@ -162,7 +164,7 @@ public:
     /**
      * Time since boot will be measured starting from the moment when the object was constructed.
      */
-    Bootloader(IAppStorageBackend& backend, unsigned boot_delay_msec);
+    Bootloader(IAppStorageBackend& backend, unsigned boot_delay_msec = DefaultBootDelayMSec);
 
     /**
      * @ref State.
