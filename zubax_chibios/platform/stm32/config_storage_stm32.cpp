@@ -27,7 +27,10 @@
  * Any FPEC issues will be detected at run time during write/erase verification.
  */
 
-#define RDP_KEY                 0x00A5
+#if !defined(RDP_KEY)
+# define RDP_KEY                0x00A5
+#endif
+
 #if !defined(FLASH_KEY1)
 # define FLASH_KEY1             0x45670123
 # define FLASH_KEY2             0xCDEF89AB
