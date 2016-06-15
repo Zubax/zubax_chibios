@@ -125,7 +125,7 @@ int executeCLICommand(int argc, char *argv[])
                   "  cfg get <name>\n"
                   "  cfg set <name> <value>\n"
                   "Note that save or erase may halt CPU for a few milliseconds which\n"
-                  "can cause transient failures in real time tasks or communications.");
+                  "may cause transient failures in real time tasks or communications.");
     }
     return -EINVAL;
 }
