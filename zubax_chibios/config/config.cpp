@@ -170,9 +170,9 @@ void configRegisterParam_(const ConfigParam* param)
     _value_pool[index] = param->default_;
 
     // Update the layout identification hash
-    for (const char* ch = param->name; *ch; ch++)
+    for (const char* c = param->name; *c; c++)
     {
-        _layout_hash = crc32_step(_layout_hash, *ch);
+        _layout_hash = crc32_step(_layout_hash, *c);
     }
 }
 
