@@ -33,6 +33,10 @@
 
 #define MAX_NUM_WATCHDOGS 31
 
+#if !defined(RCC_CSR_IWDGRSTF)
+# define RCC_CSR_IWDGRSTF   RCC_CSR_WDGRSTF
+#endif
+
 
 static unsigned _wdg_timeout_ms = 0;
 
