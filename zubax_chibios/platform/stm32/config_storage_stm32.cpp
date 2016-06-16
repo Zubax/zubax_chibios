@@ -40,22 +40,41 @@
 # define FLASH_SR_WRPRTERR      FLASH_SR_WRPERR
 #endif
 
+#if !defined(FLASH_SR_PGERR)
+# define FLASH_SR_PGERR         (FLASH_SR_WRPERR | FLASH_SR_PGAERR | FLASH_SR_PGPERR | FLASH_SR_PGSERR)
+#endif
+
 #if defined(STM32F10X_HD) || defined(STM32F10X_HD_VL) || defined(STM32F10X_CL) || defined(STM32F10X_XL)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7E0))
 # define FLASH_PAGE_SIZE        0x800
+
 #elif defined(STM32F042x6) || defined(STM32F072xB)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
 # define FLASH_PAGE_SIZE        0x400
+
 #elif defined(STM32F373xC)
 # define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
 # define FLASH_PAGE_SIZE        0x800
+
+#elif defined(STM32F446xx)
+/*
+ * TODO: This is wildly unoptimal - we're dedicating the entire 128k last sector for settings.
+ *       Probably it's better to use one of the smaller 16K sectors for that!
+ */
+# define LAST_FLASH_PAGE_SIZE   (128 * 1024)
+# define FLASH_PAGE_ADR         (FLASH_END - LAST_FLASH_PAGE_SIZE)
+# define FLASH_PAGE_SNB_MASK    (FLASH_CR_SNB_0 | FLASH_CR_SNB_1 | FLASH_CR_SNB_2)
+# define DATA_SIZE_MAX          LAST_FLASH_PAGE_SIZE
+
 #else
 # error Unknown device.
 #endif
 
-#define FLASH_END               ((FLASH_SIZE * 1024) + FLASH_BASE)
-#define FLASH_PAGE_ADR          (FLASH_END - FLASH_PAGE_SIZE)
-#define DATA_SIZE_MAX           FLASH_PAGE_SIZE
+#if defined(FLASH_PAGE_SIZE) && defined(FLASH_SIZE) && !defined(FLASH_PAGE_ADR)
+# define FLASH_END              ((FLASH_SIZE * 1024) + FLASH_BASE)
+# define FLASH_PAGE_ADR         (FLASH_END - FLASH_PAGE_SIZE)
+# define DATA_SIZE_MAX          FLASH_PAGE_SIZE
+#endif
 
 
 static void waitReady(void)
@@ -159,8 +178,12 @@ int configStorageErase(void)
      */
     prologue();
 
+#ifdef FLASH_CR_PER
     FLASH->CR = FLASH_CR_PER;
     FLASH->AR = FLASH_PAGE_ADR;
+#else
+    FLASH->CR = FLASH_CR_SER | FLASH_PAGE_SNB_MASK;
+#endif
     FLASH->CR |= FLASH_CR_STRT;
 
     waitReady();
