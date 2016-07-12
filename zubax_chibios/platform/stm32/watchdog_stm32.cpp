@@ -16,12 +16,17 @@
 #include <hal.h>
 #include <zubax_chibios/os.hpp>
 
+#if !defined(DISABLE_WATCHDOG_IN_RELEASE_BUILD)
+# define DISABLE_WATCHDOG_IN_RELEASE_BUILD      0
+#endif
 #if !defined(DISABLE_WATCHDOG)
-# define DISABLE_WATCHDOG       0
+# define DISABLE_WATCHDOG                       DISABLE_WATCHDOG_IN_RELEASE_BUILD
 #endif
 #if DISABLE_WATCHDOG
 # if (defined(RELEASE_BUILD) && RELEASE_BUILD) || !(defined(DEBUG_BUILD) && DEBUG_BUILD)
-#  error "DISABLE_WATCHDOG is not permitted with release build"
+#  if !DISABLE_WATCHDOG_IN_RELEASE_BUILD
+#   error "DISABLE_WATCHDOG is not permitted with release build"
+#  endif
 # endif
 #endif
 
