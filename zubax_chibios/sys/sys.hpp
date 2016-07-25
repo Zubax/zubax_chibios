@@ -13,6 +13,9 @@
 #include <ch.hpp>
 #include <hal.h>
 #include <type_traits>
+#include <limits>
+#include <cstdint>
+#include <cassert>
 #include "execute_once.hpp"
 
 
@@ -133,22 +136,74 @@ using MutexLocker = volatile impl_::MutexLockerImpl;
 using CriticalSectionLocker = volatile impl_::CriticalSectionLockerImpl;
 
 /**
- * Converts any unsigned integer to string and returns it by value.
- * The argument must be unsigned, otherwise the call will be rejected by SFINAE.
+ * Converts any signed or unsigned integer to string and returns it by value.
+ * The argument must be integer, otherwise the call will be rejected by SFINAE.
  */
-template <typename T, typename std::enable_if<std::is_unsigned<T>::value>::type...>
-inline auto uintToString(T num)
+template <
+    typename T,
+    typename std::enable_if<std::is_integral<T>::value>::type...
+    >
+inline auto intToString(T number)
 {
-    struct
+    // Plus 1 to round up, see the standard for details.
+    constexpr unsigned MaxCharacters = std::numeric_limits<T>::digits10 + 1 + (std::is_signed<T>::value ? 1 : 0);
+
+    class Container
     {
-        char storage_[22];                                      // len(str(2**64)) + 1
-        char* begin_ptr_ = &storage_[0] + sizeof(storage_) - 1;
-        const char* c_str() const { return begin_ptr_; }
+        std::uint_fast16_t offset_;
+        char storage_[MaxCharacters + 1];   // Plus 1 because of zero termination.
+
+    public:
+        Container(T x) :
+            offset_(MaxCharacters)          // Field initialization is not working in GCC in this context, not sure why.
+        {
+            storage_[offset_] = '\0';
+            const bool negative = std::is_signed<T>::value && (x < 0);
+
+            do
+            {
+                assert(offset_ > 0);
+
+                if (std::is_signed<T>::value)  // Should be converted to constexpr if.
+                {
+                    // We can't just do "x = -x", because it would break on int8_t(-128), int16_t(-32768), etc.
+                    auto residual = std::int_fast8_t(x % 10);
+                    if (residual < 0)
+                    {
+                        // Should never happen - since C++11, neg % pos --> pos
+                        residual = -residual;
+                    }
+
+                    storage_[--offset_] = char(residual + 0x30U);
+
+                    // Signed integers are really tricky sometimes.
+                    // We must not mix negative with positive to avoid implementation-defined behaviors.
+                    x = negative ? -(x / -10) : (x / 10);
+                }
+                else
+                {
+                    // Fast branch for unsigned arguments.
+                    storage_[--offset_] = char((x % 10U) + 0x30U);
+                    x /= 10U;
+                }
+            }
+            while (x != 0);
+
+            if (negative)               // Should be optimized with constexpr if.
+            {
+                assert(offset_ > 0);
+                storage_[--offset_] = '-';
+            }
+
+            assert(offset_ < MaxCharacters);    // Making sure there was no overflow.
+        }
+
+        const char* c_str() const { return &storage_[offset_]; }
+
         operator const char* () const { return this->c_str(); }
-    } container;
-    *container.begin_ptr_ = '\0';
-    do { *--container.begin_ptr_ = char(num % 10U + 0x30U); } while (num /= 10U);
-    return container;
-};
+    };
+
+    return Container(number);
+}
 
 }

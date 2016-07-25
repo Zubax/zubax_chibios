@@ -112,7 +112,7 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
     (void)expr;
     port_disable();
 
-    const auto line_str = os::uintToString(unsigned(line));
+    const auto line_str = os::intToString(unsigned(line));
 
     char buf[256]; // We don't care about possible stack overflow because we're going to die anyway
     char* ptr = buf;
