@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstdint>
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/float_eq.hpp>
 
 #ifndef CONFIG_PARAMS_MAX
 #  define CONFIG_PARAMS_MAX     40
@@ -99,7 +100,8 @@ static bool isValid(const ConfigParam* descr, float value)
     {
     case CONFIG_TYPE_BOOL:
     {
-        if (value != 0.0f && value != 1.0f)
+        if (!os::float_eq::close(value, 0.F) &&
+            !os::float_eq::close(value, 1.F))
         {
             return false;
         }
@@ -107,8 +109,8 @@ static bool isValid(const ConfigParam* descr, float value)
     }
     case CONFIG_TYPE_INT:
     {
-        volatile const long truncated = (long)value;
-        if (value != (float)truncated)
+        volatile const long truncated = long(value);
+        if (!os::float_eq::close(value, float(truncated)))
         {
             return false;
         }
@@ -165,7 +167,7 @@ void configRegisterParam_(const ConfigParam* param)
     // Register this param
     const int index = _num_params++;
     ASSERT_ALWAYS(_descr_pool[index] == NULL);
-    ASSERT_ALWAYS(_value_pool[index] == 0);
+    ASSERT_ALWAYS(os::float_eq::closeToZero(_value_pool[index]));
     _descr_pool[index] = param;
     _value_pool[index] = param->default_;
 

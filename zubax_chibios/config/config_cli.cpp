@@ -44,10 +44,10 @@ static int printParam(const char* name, bool verbose)
 
     if (par.type == CONFIG_TYPE_FLOAT)
     {
-        std::printf("%-*s = %-12f", _max_name_len, name, configGet(name));
+        std::printf("%-*s = %-12f", _max_name_len, name, double(configGet(name)));
         if (verbose)
         {
-            std::printf("[%f, %f] (%f)", par.min, par.max, par.default_);
+            std::printf("[%f, %f] (%f)", double(par.min), double(par.max), double(par.default_));
         }
     }
     else

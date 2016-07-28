@@ -7,6 +7,7 @@
 #pragma once
 
 #include <type_traits>
+#include <zubax_chibios/util/float_eq.hpp>
 #include "config.h"
 
 namespace os
@@ -69,7 +70,7 @@ struct Param<bool> : public ::ConfigParam
         ::configRegisterParam_(this);
     }
 
-    bool get() const { return ::configGet(name) != 0; }
+    bool get() const { return !float_eq::closeToZero(::configGet(name)); }
     operator bool() const { return get(); }
 
     int set(bool value) const

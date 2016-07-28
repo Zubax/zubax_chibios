@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
 
 
 namespace os
