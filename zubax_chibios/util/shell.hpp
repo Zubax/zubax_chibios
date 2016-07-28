@@ -15,6 +15,7 @@
 #include <memstreams.h>
 #include <cstring>
 #include <cstdint>
+#include <cstdio>
 #include <cstdarg>
 #include <cassert>
 #include <zubax_chibios/os.hpp>
@@ -67,14 +68,20 @@ public:
     template <unsigned BufferSize = 200, unsigned CharacterTimeoutMSec = DefaultWriteCharacterTimeoutMSec>
     std::size_t vprint(const char* format, va_list vl)
     {
-        MemoryStream ms;
         char buffer[BufferSize];
-        msObjectInit(&ms, reinterpret_cast<std::uint8_t*>(buffer), BufferSize, 0);
 
+#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
+        // Lightweight but limited in functionality
+        MemoryStream ms;
+        msObjectInit(&ms, reinterpret_cast<std::uint8_t*>(buffer), BufferSize, 0);
         auto chp = reinterpret_cast<::BaseSequentialStream*>(&ms);
         chvprintf(chp, format, vl);
-
         chSequentialStreamPut(chp, 0);
+#else
+        // Full featured but heavy
+        using namespace std;
+        vsnprintf(buffer, BufferSize, format, vl);
+#endif
 
         return writeExpandingCrLf(CharacterTimeoutMSec, buffer);
     }
