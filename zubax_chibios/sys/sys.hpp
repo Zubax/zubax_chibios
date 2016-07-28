@@ -138,27 +138,38 @@ using CriticalSectionLocker = volatile impl_::CriticalSectionLockerImpl;
 /**
  * Converts any signed or unsigned integer to string and returns it by value.
  * The argument must be integer, otherwise the call will be rejected by SFINAE.
+ * Usage examples:
+ *      intToString(var)
+ *      intToString<16>(var)
+ *      intToString<2>(var).c_str()
  */
 template <
+    int Radix = 10,
     typename T,
     typename std::enable_if<std::is_integral<T>::value>::type...
     >
 inline auto intToString(T number)
 {
+    static constexpr char Alphabet[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+    static_assert(Radix >= 1, "Radix must be positive");
+    static_assert(Radix <= (sizeof(Alphabet) / sizeof(Alphabet[0])), "Radix is too large");
+
     // Plus 1 to round up, see the standard for details.
-    constexpr unsigned MaxCharacters = std::numeric_limits<T>::digits10 + 1 + (std::is_signed<T>::value ? 1 : 0);
+    static constexpr unsigned MaxChars =
+        ((Radix >= 10) ? std::numeric_limits<T>::digits10 : std::numeric_limits<T>::digits) +
+        1 + (std::is_signed<T>::value ? 1 : 0);
 
     class Container
     {
         std::uint_fast16_t offset_;
-        char storage_[MaxCharacters + 1];   // Plus 1 because of zero termination.
+        char storage_[MaxChars + 1];   // Plus 1 because of zero termination.
 
     public:
         Container(T x) :
-            offset_(MaxCharacters)          // Field initialization is not working in GCC in this context, not sure why.
+            offset_(MaxChars)          // Field initialization is not working in GCC in this context, not sure why.
         {
             storage_[offset_] = '\0';
-            const bool negative = std::is_signed<T>::value && (x < 0);
 
             do
             {
@@ -167,35 +178,35 @@ inline auto intToString(T number)
                 if (std::is_signed<T>::value)  // Should be converted to constexpr if.
                 {
                     // We can't just do "x = -x", because it would break on int8_t(-128), int16_t(-32768), etc.
-                    auto residual = std::int_fast8_t(x % 10);
+                    auto residual = std::int_fast8_t(x % Radix);
                     if (residual < 0)
                     {
                         // Should never happen - since C++11, neg % pos --> pos
                         residual = -residual;
                     }
 
-                    storage_[--offset_] = char(residual + 0x30U);
+                    storage_[--offset_] = Alphabet[residual];
 
                     // Signed integers are really tricky sometimes.
                     // We must not mix negative with positive to avoid implementation-defined behaviors.
-                    x = negative ? -(x / -10) : (x / 10);
+                    x = (x < 0) ? -(x / -Radix) : (x / Radix);
                 }
                 else
                 {
                     // Fast branch for unsigned arguments.
-                    storage_[--offset_] = char((x % 10U) + 0x30U);
-                    x /= 10U;
+                    storage_[--offset_] = Alphabet[x % Radix];
+                    x /= Radix;
                 }
             }
             while (x != 0);
 
-            if (negative)               // Should be optimized with constexpr if.
+            if (std::is_signed<T>::value && (x < 0))    // Should be optimized with constexpr if.
             {
                 assert(offset_ > 0);
                 storage_[--offset_] = '-';
             }
 
-            assert(offset_ < MaxCharacters);    // Making sure there was no overflow.
+            assert(offset_ < MaxChars);                 // Making sure there was no overflow.
         }
 
         const char* c_str() const { return &storage_[offset_]; }
