@@ -344,7 +344,7 @@ public:
             {
                 if (pos_ < MaxLineLength)
                 {
-                    echo(ios, chr);
+                    echo(ios, char(chr));
                     line_buffer_[pos_++] = char(chr);
                 }
             }
