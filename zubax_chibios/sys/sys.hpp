@@ -142,6 +142,12 @@ using CriticalSectionLocker = volatile impl_::CriticalSectionLockerImpl;
  *      intToString(var)
  *      intToString<16>(var)
  *      intToString<2>(var).c_str()
+ * It is safe to obtain a reference to the returned string and pass it to another function as an argument,
+ * which enables use cases like this (this example is somewhat made up, but it conveys the idea nicely):
+ *      print("%s", intToString(123).c_str());
+ * More info on rvalue references:
+ *      https://herbsutter.com/2008/01/01/gotw-88-a-candidate-for-the-most-important-const/
+ *      http://stackoverflow.com/questions/584824/guaranteed-lifetime-of-temporary-in-c
  */
 template <
     int Radix = 10,
