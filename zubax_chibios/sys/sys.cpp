@@ -79,8 +79,11 @@ void zchSysHaltHook(const char* msg)
 
     applicationHaltHook();
 
+    /*
+     * Printing the general panic message
+     */
     port_disable();
-    emergencyPrint("\nPANIC [");
+    emergencyPrint("\r\nPANIC [");
 #if CH_CFG_USE_REGISTRY
     const thread_t *pthread = chThdGetSelfX();
     if (pthread && pthread->p_name)
@@ -94,8 +97,80 @@ void zchSysHaltHook(const char* msg)
     {
         emergencyPrint(msg);
     }
-    emergencyPrint("\n");
+    emergencyPrint("\r\n");
 
+    static const auto print_register = [](const char* name, std::uint32_t value)
+        {
+            char buf[20];
+            std::strncpy(buf, name, sizeof(buf));
+            for (unsigned i = 0; i < sizeof(buf); i++)
+            {
+                if (buf[i] == '\0')
+                {
+                    buf[i] = ' ';
+                }
+            }
+            buf[sizeof(buf) - 1] = '\0';
+            emergencyPrint(static_cast<const char*>(buf));
+            emergencyPrint(intToString<16>(value).c_str());
+            emergencyPrint("\r\n");
+        };
+
+    static const auto print_stack = [](const std::uint32_t* const ptr)
+        {
+            print_register("Stack ptr", reinterpret_cast<std::uint32_t>(ptr));
+            print_register("R0",      ptr[0]);
+            print_register("R1",      ptr[1]);
+            print_register("R2",      ptr[2]);
+            print_register("R3",      ptr[3]);
+            print_register("R12",     ptr[4]);
+            print_register("R14[LR]", ptr[5]);
+            print_register("R15[PC]", ptr[6]);
+            print_register("PSR",     ptr[7]);
+        };
+
+    /*
+     * Printing registers
+     */
+    emergencyPrint("\r\nCore registers:\r\n");
+#define PRINT_CORE_REGISTER(name)       print_register(#name, __get_##name())
+    PRINT_CORE_REGISTER(CONTROL);
+    PRINT_CORE_REGISTER(IPSR);
+    PRINT_CORE_REGISTER(APSR);
+    PRINT_CORE_REGISTER(xPSR);
+    PRINT_CORE_REGISTER(PRIMASK);
+#if __CORTEX_M >= 3
+    PRINT_CORE_REGISTER(BASEPRI);
+    PRINT_CORE_REGISTER(FAULTMASK);
+#endif
+#if __CORTEX_M >= 4
+    PRINT_CORE_REGISTER(FPSCR);
+#endif
+#undef PRINT_CORE_REGISTER
+
+    emergencyPrint("\r\nProcess stack:\r\n");
+    print_stack(reinterpret_cast<std::uint32_t*>(__get_PSP()));
+
+    emergencyPrint("\r\nMain stack:\r\n");
+    print_stack(reinterpret_cast<std::uint32_t*>(__get_MSP()));
+
+    emergencyPrint("\r\nSCB:\r\n");
+#define PRINT_SCB_REGISTER(name)        print_register(#name, SCB->name)
+    PRINT_SCB_REGISTER(AIRCR);
+    PRINT_SCB_REGISTER(SCR);
+    PRINT_SCB_REGISTER(CCR);
+    PRINT_SCB_REGISTER(SHCSR);
+    PRINT_SCB_REGISTER(CFSR);
+    PRINT_SCB_REGISTER(HFSR);
+    PRINT_SCB_REGISTER(DFSR);
+    PRINT_SCB_REGISTER(MMFAR);
+    PRINT_SCB_REGISTER(BFAR);
+    PRINT_SCB_REGISTER(AFSR);
+#undef PRINT_SCB_REGISTER
+
+    /*
+     * Emulating a breakpoint if we're in debug mode
+     */
 #if defined(DEBUG_BUILD) && DEBUG_BUILD && defined(CoreDebug_DHCSR_C_DEBUGEN_Msk)
     if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     {
