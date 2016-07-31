@@ -6,6 +6,7 @@
 
 #include "bootloader.hpp"
 #include <ch.hpp>
+#include <zubax_chibios/util/heapless.hpp>
 
 
 namespace bootloader
@@ -74,8 +75,8 @@ std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
             if (crc.get() != desc.app_info.image_crc)
             {
                 DEBUG_LOG("App descriptor found, but CRC is invalid (%s != %s)\n",
-                          os::uintToString(crc.get()).c_str(),
-                          os::uintToString(desc.app_info.image_crc).c_str());
+                          os::heapless::intToString(crc.get()).c_str(),
+                          os::heapless::intToString(desc.app_info.image_crc).c_str());
                 continue;       // Look further...
             }
         }
