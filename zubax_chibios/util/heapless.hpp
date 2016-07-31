@@ -195,6 +195,16 @@ public:
         assert(buf_[Capacity] == '\0');
     }
 
+    void append(char p)
+    {
+        if (len_ < Capacity)
+        {
+            buf_[len_++] = p;
+        }
+        buf_[len_] = '\0';
+        assert(buf_[Capacity] == '\0');
+    }
+
     template <typename T>
     typename std::enable_if<std::is_integral<T>::value>::type append(const T& value)
     {
