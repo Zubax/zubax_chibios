@@ -102,24 +102,15 @@ void zchSysHaltHook(const char* msg)
 
     static const auto print_register = [](const char* name, std::uint32_t value)
         {
-            char buf[20];
-            std::strncpy(buf, name, sizeof(buf));
-            for (unsigned i = 0; i < sizeof(buf); i++)
-            {
-                if (buf[i] == '\0')
-                {
-                    buf[i] = ' ';
-                }
-            }
-            buf[sizeof(buf) - 1] = '\0';
-            emergencyPrint(static_cast<const char*>(buf));
-            emergencyPrint(os::heapless::intToString<16>(value).c_str());
+            emergencyPrint(name);
+            emergencyPrint("\t");
+            emergencyPrint(os::heapless::intToString<16>(value));
             emergencyPrint("\r\n");
         };
 
     static const auto print_stack = [](const std::uint32_t* const ptr)
         {
-            print_register("Stack ptr", reinterpret_cast<std::uint32_t>(ptr));
+            print_register("Pointer", reinterpret_cast<std::uint32_t>(ptr));
             print_register("R0",      ptr[0]);
             print_register("R1",      ptr[1]);
             print_register("R2",      ptr[2]);
@@ -182,39 +173,11 @@ void zchSysHaltHook(const char* msg)
 
 void __assert_func(const char* file, int line, const char* func, const char* expr)
 {
-    (void)file;
-    (void)line;
-    (void)func;
-    (void)expr;
     port_disable();
 
-    const auto line_str = os::heapless::intToString(unsigned(line));
+    chSysHalt(os::heapless::concatenate(file, ":", line, " ", (func == nullptr) ? "" : func, ": ", expr).c_str());
 
-    char buf[256]; // We don't care about possible stack overflow because we're going to die anyway
-    char* ptr = buf;
-    const unsigned size = sizeof(buf);
-    unsigned pos = 0;
-
-#define APPEND_MSG(text) { \
-        (void)std::strncpy(ptr + pos, text, (size > pos) ? (size - pos) : 0); \
-        pos += strlen(text); \
-    }
-
-    APPEND_MSG(file);
-    APPEND_MSG(":");
-    APPEND_MSG(line_str.c_str());
-    if (func != NULL)
-    {
-        APPEND_MSG(" ");
-        APPEND_MSG(func);
-    }
-    APPEND_MSG(": ");
-    APPEND_MSG(expr);
-
-#undef APPEND_MSG
-
-    chSysHalt(buf);
-    while (1) { }
+    while (true) { }
 }
 
 /// From unistd
