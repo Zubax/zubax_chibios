@@ -12,6 +12,7 @@
 #include <cstring>
 #include <cstdarg>
 #include <type_traits>
+#include <zubax_chibios/util/heapless.hpp>
 
 #if !CH_CFG_USE_REGISTRY
 # pragma message "CH_CFG_USE_REGISTRY is disabled, panic reports will be incomplete"
@@ -112,7 +113,7 @@ void zchSysHaltHook(const char* msg)
             }
             buf[sizeof(buf) - 1] = '\0';
             emergencyPrint(static_cast<const char*>(buf));
-            emergencyPrint(intToString<16>(value).c_str());
+            emergencyPrint(os::heapless::intToString<16>(value).c_str());
             emergencyPrint("\r\n");
         };
 
@@ -187,7 +188,7 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
     (void)expr;
     port_disable();
 
-    const auto line_str = os::intToString(unsigned(line));
+    const auto line_str = os::heapless::intToString(unsigned(line));
 
     char buf[256]; // We don't care about possible stack overflow because we're going to die anyway
     char* ptr = buf;

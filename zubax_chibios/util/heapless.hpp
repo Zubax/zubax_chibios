@@ -11,11 +11,13 @@
 #pragma once
 
 #include <type_traits>
+#include <algorithm>
 #include <cassert>
 #include <cstdarg>
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>
+#include <cstdio>
 #include <limits>
 
 
@@ -152,7 +154,8 @@ public:
     {
         String<(DefaultStringCapacity > Capacity) ? DefaultStringCapacity : Capacity> output;
 
-        const int res = std::snprintf(output.begin(), output.capacity(), this->c_str(), format_args...);
+        using namespace std;
+        const int res = snprintf(output.begin(), output.capacity(), this->c_str(), format_args...);
         if (res > 0)
         {
             output.len_ = std::min(output.capacity(), unsigned(res));
@@ -202,7 +205,8 @@ public:
     typename std::enable_if<std::is_floating_point<T>::value>::type append(const T& value)
     {
         char buffer[20];
-        (void) std::snprintf(buffer, sizeof(buffer), "%g", double(value));
+        using namespace std;
+        (void) snprintf(buffer, sizeof(buffer), "%g", double(value));
         append(static_cast<const char*>(&buffer[0]));
     }
 
