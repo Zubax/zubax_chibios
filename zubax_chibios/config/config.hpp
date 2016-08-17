@@ -20,6 +20,9 @@ namespace _internal
 template <typename T>
 struct Param : public ::ConfigParam
 {
+    Param(const Param&) = delete;
+    Param& operator=(const Param&) = delete;
+
     static_assert(std::is_floating_point<T>() || std::is_integral<T>(), "One does not simply use T here");
 
     Param(const char* arg_name, T arg_default, T arg_min, T arg_max) : ConfigParam
