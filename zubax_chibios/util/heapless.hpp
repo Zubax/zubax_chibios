@@ -116,7 +116,7 @@ inline auto intToString(T number)
 /**
  * The default capacity is optimal for most embedded use cases.
  */
-constexpr unsigned DefaultStringCapacity = 100;
+constexpr unsigned DefaultStringCapacity = 200;
 
 /**
  * Heapless string that keeps all data inside a fixed length buffer.
