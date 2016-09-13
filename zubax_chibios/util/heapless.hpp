@@ -214,9 +214,14 @@ public:
     template <typename T>
     typename std::enable_if<std::is_floating_point<T>::value>::type append(const T& value)
     {
+        constexpr int Precision = std::numeric_limits<T>::digits10 + 1;
+        static_assert(Precision > 1, "Invalid floating point type?");
+
         char buffer[20];
+
         using namespace std;
-        (void) snprintf(buffer, sizeof(buffer), "%g", double(value));
+        (void) snprintf(buffer, sizeof(buffer), "%.*g", Precision, double(value));
+
         append(static_cast<const char*>(&buffer[0]));
     }
 
