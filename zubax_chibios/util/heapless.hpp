@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+#include <cctype>
 
 
 namespace os
@@ -167,6 +168,11 @@ public:
     /*
      * std::string API
      */
+    using value_type = char;
+    using size_type = unsigned;
+    using iterator = char*;
+    using const_iterator = const iterator;
+
     constexpr unsigned capacity() const { return Capacity; }
     constexpr unsigned max_size() const { return Capacity; }
 
@@ -224,6 +230,8 @@ public:
 
         append(static_cast<const char*>(&buffer[0]));
     }
+
+    void push_back(char c) { append(c); }
 
     template <typename T>
     void concatenate(const T& head)
@@ -313,6 +321,20 @@ public:
     /*
      * Helpers
      */
+    String<Capacity> toLowerCase() const
+    {
+        String<Capacity> out;
+        std::transform(begin(), end(), std::back_inserter(out), [](char c) { return char(std::tolower(c)); });
+        return out;
+    }
+
+    String<Capacity> toUpperCase() const
+    {
+        String<Capacity> out;
+        std::transform(begin(), end(), std::back_inserter(out), [](char c) { return char(std::toupper(c)); });
+        return out;
+    }
+
     template <typename Left, typename Right>
     static auto join(const Left& left, const Right& right)
     {
