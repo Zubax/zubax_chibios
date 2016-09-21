@@ -96,6 +96,12 @@ public:
         return ret;
     }
 
+    void puts(const char* s, unsigned timeout_msec = DefaultWriteCharacterTimeoutMSec)
+    {
+        writeExpandingCrLf(timeout_msec, s);
+        writeExpandingCrLf(timeout_msec, "\n");
+    }
+
     int getChar(unsigned timeout_msec)
     {
         return chnGetTimeout(channel_, MS2ST(timeout_msec));
