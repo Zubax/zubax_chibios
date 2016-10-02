@@ -50,7 +50,8 @@ static constexpr unsigned DefaultEpsilonMult = 10;
  * Most of the time you DON'T want to use this function! Consider using close() instead.
  */
 template<typename T>
-inline bool exactlyEqual(const T& left, const T& right)
+inline bool exactlyEqual(const T left,
+                         const T right)
 {
     return (left <= right) && (left >= right);
 }
@@ -62,7 +63,10 @@ inline bool exactlyEqual(const T& left, const T& right)
  * See also: @ref DEFAULT_FLOAT_COMPARISON_EPSILON_MULT.
  */
 template<typename T>
-inline bool close(const T a, const T b, const T absolute_epsilon, const T relative_epsilon)
+inline bool close(const T a,
+                  const T b,
+                  const T absolute_epsilon,
+                  const T relative_epsilon)
 {
     // NAN
     if (std::isnan(a) || std::isnan(b))
@@ -182,24 +186,24 @@ inline bool close(const L& left, const R& right)
 /*
  * Float comparison specializations
  */
-template<>
-inline bool close<float, float>(const float& left, const float& right)
+inline bool close(const float left,
+                  const float right)
 {
     return close(left, right,
                  std::numeric_limits<float>::epsilon(),
                  std::numeric_limits<float>::epsilon() * DefaultEpsilonMult);
 }
 
-template<>
-inline bool close<double, double>(const double& left, const double& right)
+inline bool close(const double left,
+                  const double right)
 {
     return close(left, right,
                  std::numeric_limits<double>::epsilon(),
                  std::numeric_limits<double>::epsilon() * DefaultEpsilonMult);
 }
 
-template<>
-inline bool close<long double, long double>(const long double& left, const long double& right)
+inline bool close(const long double left,
+                  const long double right)
 {
     return close(left, right,
                  std::numeric_limits<long double>::epsilon(),
@@ -209,38 +213,38 @@ inline bool close<long double, long double>(const long double& left, const long 
 /*
  * Mixed floating type comparison - coercing larger type to smaller type
  */
-template<>
-inline bool close<float, double>(const float& left, const double& right)
+inline bool close(const float left,
+                  const double right)
 {
     return close(left, static_cast<float>(right));
 }
 
-template<>
-inline bool close<double, float>(const double& left, const float& right)
+inline bool close(const double left,
+                  const float right)
 {
     return close(static_cast<float>(left), right);
 }
 
-template<>
-inline bool close<float, long double>(const float& left, const long double& right)
+inline bool close(const float left,
+                  const long double right)
 {
     return close(left, static_cast<float>(right));
 }
 
-template<>
-inline bool close<long double, float>(const long double& left, const float& right)
+inline bool close(const long double left,
+                  const float right)
 {
     return close(static_cast<float>(left), right);
 }
 
-template<>
-inline bool close<double, long double>(const double& left, const long double& right)
+inline bool close(const double left,
+                  const long double right)
 {
     return close(left, static_cast<double>(right));
 }
 
-template<>
-inline bool close<long double, double>(const long double& left, const double& right)
+inline bool close(const long double left,
+                  const double right)
 {
     return close(static_cast<double>(left), right);
 }
@@ -257,20 +261,17 @@ inline bool closeToZero(const T& x)
     return x == T(0);
 }
 
-template<>
-inline bool closeToZero<float>(const float& x)
+inline bool closeToZero(const float x)
 {
     return close(x, static_cast<float>(0.0F));
 }
 
-template<>
-inline bool closeToZero<double>(const double& x)
+inline bool closeToZero(const double x)
 {
     return close(x, static_cast<double>(0.0));
 }
 
-template<>
-inline bool closeToZero<long double>(const long double& x)
+inline bool closeToZero(const long double x)
 {
     return close(x, static_cast<long double>(0.0L));
 }
