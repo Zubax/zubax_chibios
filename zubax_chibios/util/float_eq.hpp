@@ -276,5 +276,18 @@ inline bool closeToZero(const long double x)
     return close(x, static_cast<long double>(0.0L));
 }
 
+
+template<typename T>
+inline bool positive(const T& x)
+{
+    return (x > T(0)) && !closeToZero(x);
+}
+
+template<typename T>
+inline bool negative(const T& x)
+{
+    return (x < T(0)) && !closeToZero(x);
+}
+
 }
 }
