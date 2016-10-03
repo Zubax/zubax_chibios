@@ -57,13 +57,6 @@ typedef struct
 void configRegisterParam_(const ConfigParam* param);
 
 /**
- * Returns 0 if everything is OK, even if the configuration could not be restored (this is not an error).
- * All other interface functions assume that the config module was initialized successfully.
- * Returns negative errno in case of unrecoverable fault.
- */
-int configInit(void);
-
-/**
  * Saves the config into the non-volatile memory.
  * May enter a huge critical section, so it shall never be called concurrently with hard real time processes.
  */
@@ -87,13 +80,6 @@ const char* configNameByIndex(int index);
  * @return 0 if the parameter does exist and the value is valid, negative errno otherwise.
  */
 int configSet(const char* name, float value);
-
-/**
- * Returns the number of times configSet() was executed successfully.
- * The returned value can only grow (with overflow).
- * This value can be used to reload changed parameter values in the background.
- */
-unsigned configGetModificationCounter(void);
 
 /**
  * @param [in]  name Parameter name

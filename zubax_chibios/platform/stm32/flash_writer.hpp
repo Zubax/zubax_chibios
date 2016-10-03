@@ -11,8 +11,9 @@
 #include <cassert>
 #include <cstring>
 #include <cstdint>
+#include <algorithm>
 
-#if !defined(FLASH_SR_WRPRTERR)
+#if !defined(FLASH_SR_WRPRTERR) // Compatibility
 # define FLASH_SR_WRPRTERR      FLASH_SR_WRPERR
 #endif
 
@@ -31,34 +32,73 @@ class FlashWriter
     {
         do
         {
-            assert(!(FLASH->SR & FLASH_SR_PGERR));
             assert(!(FLASH->SR & FLASH_SR_WRPRTERR));
+#ifdef FLASH_SR_PGERR
+            assert(!(FLASH->SR & FLASH_SR_PGERR));
+#else
+            assert(!(FLASH->SR & FLASH_SR_PGAERR));
+            assert(!(FLASH->SR & FLASH_SR_PGPERR));
+            assert(!(FLASH->SR & FLASH_SR_PGSERR));
+#endif
         }
         while (FLASH->SR & FLASH_SR_BSY);
-        FLASH->SR |= FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR;         // Reset flags
+        FLASH->SR |= FLASH_SR_EOP;
     }
 
     struct Prologuer
     {
+        const CriticalSectionLocker locker_;
+
         Prologuer()
         {
-            chSysLock();
             waitReady();
             if (FLASH->CR & FLASH_CR_LOCK)
             {
                 FLASH->KEYR = 0x45670123UL;
                 FLASH->KEYR = 0xCDEF89ABUL;
             }
-            FLASH->SR |= FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR;     // Reset flags
+            FLASH->SR |= FLASH_SR_EOP | FLASH_SR_WRPRTERR |
+#ifdef FLASH_SR_PGERR
+                FLASH_SR_PGERR
+#else
+                FLASH_SR_PGAERR | FLASH_SR_PGPERR | FLASH_SR_PGSERR
+#endif
+                ;
             FLASH->CR = 0;
         }
 
         ~Prologuer()
         {
             FLASH->CR = FLASH_CR_LOCK;  // Reset the FPEC configuration and lock
-            chSysUnlock();
         }
     };
+
+    /// Returns negative if there's no match
+    static int mapAddressToSectorNumber(const std::size_t where)
+    {
+        if (where < 0x08000000)
+        {
+            return -1;
+        }
+
+#if defined(STM32F446xx)
+        // 16K
+        if (where < 0x08003FFF) { return 0; }
+        if (where < 0x08007FFF) { return 1; }
+        if (where < 0x0800BFFF) { return 2; }
+        if (where < 0x0800FFFF) { return 3; }
+        // 64K
+        if (where < 0x0801FFFF) { return 4; }
+        // 128K
+        if (where < 0x0803FFFF) { return 5; }
+        if (where < 0x0805FFFF) { return 6; }
+        if (where < 0x0807FFFF) { return 7; }
+#else
+        assert(false);
+#endif
+
+        return -1;
+    }
 
 public:
     /**
@@ -66,7 +106,7 @@ public:
      */
     bool write(const void* const where,
                const void* const what,
-               const unsigned how_much)
+               const std::size_t how_much)
     {
         if (((reinterpret_cast<std::size_t>(where)) % 2 != 0) ||
             ((reinterpret_cast<std::size_t>(what)) % 2 != 0) ||
@@ -81,36 +121,78 @@ public:
         volatile std::uint16_t* flashptr16 = static_cast<std::uint16_t*>(const_cast<void*>(where));
         const std::uint16_t* ramptr16 = static_cast<const std::uint16_t*>(what);
 
-        Prologuer prologuer;
-
-        FLASH->CR = FLASH_CR_PG;
-
-        for (unsigned i = 0; i < num_halfwords; i++)
         {
-            *flashptr16++ = *ramptr16++;
-            waitReady();
-        }
+            Prologuer prologuer;
 
-        waitReady();
-        FLASH->CR = 0;
+#ifdef FLASH_CR_PSIZE_0
+            FLASH->CR = FLASH_CR_PG | FLASH_CR_PSIZE_0;
+#else
+            FLASH->CR = FLASH_CR_PG;
+#endif
+
+            for (unsigned i = 0; i < num_halfwords; i++)
+            {
+                *flashptr16++ = *ramptr16++;
+                waitReady();
+            }
+
+            waitReady();
+            FLASH->CR = 0;
+        }
 
         return std::memcmp(what, where, how_much) == 0;
     }
 
     /**
-     * Erases the page located at the specified address.
+     * Erases the specified region, possibly more if the region does not exactly match with the page/sector boundaries.
      */
-    bool erasePageAt(const unsigned page_address)
+    bool erase(const void* const where,
+               const std::size_t how_much)
     {
-        Prologuer prologuer;
+#if defined(FLASH_CR_PER)
+        constexpr unsigned SmallestPageSize = 512;
 
-        FLASH->CR = FLASH_CR_PER;
-        FLASH->AR = page_address;
-        FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
-        waitReady();
-        FLASH->CR = 0;
+        for (std::size_t location = reinterpret_cast<std::size_t>(where);
+             location < (reinterpret_cast<std::size_t>(where) + how_much);
+             location += SmallestPageSize)
+        {
+            Prologuer prologuer;
+            FLASH->CR = FLASH_CR_PER;
+            FLASH->AR = page_address;
+            FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
+            waitReady();
+            FLASH->CR = 0;
+        }
+#else
+        constexpr unsigned SmallestSectorSize = 1024;
 
-        return true;
+        int sector_number = -1;
+
+        for (std::size_t location = reinterpret_cast<std::size_t>(where);
+             location < (reinterpret_cast<std::size_t>(where) + how_much);
+             location += SmallestSectorSize)
+        {
+            const int new_sector_number = mapAddressToSectorNumber(location);
+            if (new_sector_number < 0)
+            {
+                return false;
+            }
+            if (new_sector_number == sector_number)
+            {
+                continue;
+            }
+            sector_number = new_sector_number;
+
+            Prologuer prologuer;
+            FLASH->CR = FLASH_CR_SER | (sector_number << 3);
+            waitReady();
+            FLASH->CR = 0;
+        }
+#endif
+
+        return std::all_of(reinterpret_cast<const std::uint8_t*>(where),
+                           reinterpret_cast<const std::uint8_t*>(where) + how_much,
+                           [](std::uint8_t x) { return x == 0xFF; });
     }
 };
 

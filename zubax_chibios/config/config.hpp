@@ -7,6 +7,7 @@
 #pragma once
 
 #include <type_traits>
+#include <functional>
 #include <zubax_chibios/util/float_eq.hpp>
 #include "config.h"
 
@@ -92,7 +93,7 @@ struct Param<bool> : public ::ConfigParam
     }
 };
 
-}
+} // namespace _internal
 
 /**
  * Parameter usage crash course:
@@ -112,16 +113,32 @@ struct Param<bool> : public ::ConfigParam
 template <typename T>
 using Param = const typename _internal::Param<T>;
 
-
-static inline int init()
+/**
+ * This interface abstracts the configuration storage.
+ */
+class IStorageBackend
 {
-    return ::configInit();
-}
+public:
+    virtual ~IStorageBackend() { }
 
-static inline unsigned getModificationCounter()
-{
-    return ::configGetModificationCounter();
-}
+    virtual int read(std::size_t offset, void* data, std::size_t len) = 0;
+    virtual int write(std::size_t offset, const void* data, std::size_t len) = 0;
+    virtual int erase() = 0;
+};
+
+/**
+ * Returns 0 if everything is OK, even if the configuration could not be restored (this is not an error).
+ * All other interface functions assume that the config module was initialized successfully.
+ * Returns negative errno in case of unrecoverable fault.
+ */
+int init(IStorageBackend* storage);
+
+/**
+ * Returns the number of times configSet() was executed successfully.
+ * The returned value can only grow (with overflow).
+ * This value can be used to reload changed parameter values in the background.
+ */
+unsigned getModificationCounter();
 
 /**
  * Allows to read/modify/save/restore commands via CLI
