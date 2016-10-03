@@ -17,10 +17,6 @@
 #include <cstring>
 #include <cerrno>
 
-#ifdef STM32F10X_XL
-#  error "Add support for XL devices"
-#endif
-
 /*
  * The code below assumes that HSI oscillator is up and running,
  * otherwise the Flash controller (FPEC) may misbehave.
@@ -40,49 +36,43 @@
 # define FLASH_SR_WRPRTERR      FLASH_SR_WRPERR
 #endif
 
-#if !defined(FLASH_SR_PGERR)
-# define FLASH_SR_PGERR         (FLASH_SR_WRPERR | FLASH_SR_PGAERR | FLASH_SR_PGPERR | FLASH_SR_PGSERR)
-#endif
-
-#if defined(STM32F10X_HD) || defined(STM32F10X_HD_VL) || defined(STM32F10X_CL) || defined(STM32F10X_XL)
-# define FLASH_SIZE            (*((uint16_t*)0x1FFFF7E0))
-# define FLASH_PAGE_SIZE        0x800
-
-#elif defined(STM32F042x6) || defined(STM32F072xB)
-# define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
-# define FLASH_PAGE_SIZE        0x400
-
-#elif defined(STM32F373xC)
-# define FLASH_SIZE            (*((uint16_t*)0x1FFFF7CC))
-# define FLASH_PAGE_SIZE        0x800
-
-#elif defined(STM32F446xx)
-/*
- * TODO: This is wildly unoptimal - we're dedicating the entire 128k last sector for settings.
- *       Probably it's better to use one of the smaller 16K sectors for that!
+namespace os
+{
+namespace config
+{
+/**
+ * These values should be defined elsewhere in the application.
+ * @{
  */
-# define LAST_FLASH_PAGE_SIZE   (128 * 1024)
-# define FLASH_PAGE_ADR         (FLASH_END - LAST_FLASH_PAGE_SIZE)
-# define FLASH_PAGE_SNB_MASK    (FLASH_CR_SNB_0 | FLASH_CR_SNB_1 | FLASH_CR_SNB_2)
-# define DATA_SIZE_MAX          LAST_FLASH_PAGE_SIZE
+extern const unsigned StorageAddress;
+extern const unsigned StorageSize;
+extern const unsigned StorageSectorNumber;
+/**
+ * @}
+ */
+}
+}
 
-#else
-# error Unknown device.
-#endif
+using namespace os::config;
 
-#if defined(FLASH_PAGE_SIZE) && defined(FLASH_SIZE) && !defined(FLASH_PAGE_ADR)
-# define FLASH_END              ((FLASH_SIZE * 1024) + FLASH_BASE)
-# define FLASH_PAGE_ADR         (FLASH_END - FLASH_PAGE_SIZE)
-# define DATA_SIZE_MAX          FLASH_PAGE_SIZE
-#endif
 
+static void checkInvariants(void)
+{
+    assert(StorageAddress % 256 == 0);
+    assert(StorageSize    % 256 == 0);
+    assert(StorageAddress      > 0);
+    assert(StorageSize         > 0);
+    assert(StorageSectorNumber > 0);
+}
 
 static void waitReady(void)
 {
     do
     {
-        assert(!(FLASH->SR & FLASH_SR_PGERR));
         assert(!(FLASH->SR & FLASH_SR_WRPRTERR));
+        assert(!(FLASH->SR & FLASH_SR_PGAERR));
+        assert(!(FLASH->SR & FLASH_SR_PGPERR));
+        assert(!(FLASH->SR & FLASH_SR_PGSERR));
     }
     while (FLASH->SR & FLASH_SR_BSY);
     FLASH->SR |= FLASH_SR_EOP;
@@ -90,6 +80,7 @@ static void waitReady(void)
 
 static void prologue(void)
 {
+    checkInvariants();
     chSysLock();
     waitReady();
     if (FLASH->CR & FLASH_CR_LOCK)
@@ -97,7 +88,7 @@ static void prologue(void)
         FLASH->KEYR = FLASH_KEY1;
         FLASH->KEYR = FLASH_KEY2;
     }
-    FLASH->SR |= FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR; // Reset flags
+    FLASH->SR |= FLASH_SR_EOP | FLASH_SR_WRPRTERR | FLASH_SR_PGAERR | FLASH_SR_PGPERR | FLASH_SR_PGSERR;
     FLASH->CR = 0;
 }
 
@@ -109,7 +100,9 @@ static void epilogue(void)
 
 int configStorageRead(unsigned offset, void* data, unsigned len)
 {
-    if (!data || (offset + len) > DATA_SIZE_MAX)
+    checkInvariants();
+
+    if (!data || (offset + len) > StorageSize)
     {
         assert(0);
         return -EINVAL;
@@ -118,13 +111,13 @@ int configStorageRead(unsigned offset, void* data, unsigned len)
     /*
      * Read directly, FPEC is not involved
      */
-    std::memcpy(data, (void*)(FLASH_PAGE_ADR + offset), len);
+    std::memcpy(data, (void*)(StorageAddress + offset), len);
     return 0;
 }
 
 int configStorageWrite(unsigned offset, const void* data, unsigned len)
 {
-    if (!data || (offset + len) > DATA_SIZE_MAX)
+    if (!data || (offset + len) > StorageSize)
     {
         assert(0);
         return -EINVAL;
@@ -149,9 +142,13 @@ int configStorageWrite(unsigned offset, const void* data, unsigned len)
      */
     prologue();
 
+#ifdef FLASH_CR_PSIZE_0
+    FLASH->CR = FLASH_CR_PG | FLASH_CR_PSIZE_0;
+#else
     FLASH->CR = FLASH_CR_PG;
+#endif
 
-    volatile uint16_t* flashptr16 = (uint16_t*)(FLASH_PAGE_ADR + offset);
+    volatile uint16_t* flashptr16 = (uint16_t*)(StorageAddress + offset);
     const uint16_t* ramptr16 = (const uint16_t*)data;
     for (unsigned i = 0; i < num_data_halfwords; i++)
     {
@@ -167,7 +164,7 @@ int configStorageWrite(unsigned offset, const void* data, unsigned len)
     /*
      * Verify
      */
-    const int cmpres = memcmp(data, (void*)(FLASH_PAGE_ADR + offset), len);
+    const int cmpres = memcmp(data, (void*)(StorageAddress + offset), len);
     return cmpres ? -EIO : 0;
 }
 
@@ -180,9 +177,9 @@ int configStorageErase(void)
 
 #ifdef FLASH_CR_PER
     FLASH->CR = FLASH_CR_PER;
-    FLASH->AR = FLASH_PAGE_ADR;
+    FLASH->AR = StorageAddress;
 #else
-    FLASH->CR = FLASH_CR_SER | FLASH_PAGE_SNB_MASK;
+    FLASH->CR = FLASH_CR_SER | ((StorageSectorNumber) << 3);
 #endif
     FLASH->CR |= FLASH_CR_STRT;
 
@@ -194,9 +191,9 @@ int configStorageErase(void)
     /*
      * Verify
      */
-    for (int i = 0; i < DATA_SIZE_MAX; i++)
+    for (unsigned i = 0; i < StorageSize; i++)
     {
-        uint8_t* ptr = (uint8_t*)(FLASH_PAGE_ADR + i);
+        uint8_t* ptr = (uint8_t*)(StorageAddress + i);
         if (*ptr != 0xFF)
         {
             return -EIO;
