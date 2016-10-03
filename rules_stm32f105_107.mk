@@ -8,7 +8,6 @@ ZUBAX_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/platform/stm32/sys_stm32.cpp               \
           $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/platform/stm32/watchdog_stm32.cpp          \
-          $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/platform/stm32/config_storage_stm32.cpp    \
 
 CHIBIOS := $(ZUBAX_CHIBIOS_DIR)/chibios
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f1xx.mk
