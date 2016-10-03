@@ -182,14 +182,17 @@ public:
                 continue;
             }
             sector_number = new_sector_number;
+            DEBUG_LOG("Erasing at 0x%08x, sector %d\n", unsigned(location), sector_number);
 
             Prologuer prologuer;
             FLASH->CR = FLASH_CR_SER | (sector_number << 3);
+            FLASH->CR |= FLASH_CR_STRT;
             waitReady();
             FLASH->CR = 0;
         }
 #endif
 
+        DEBUG_LOG("Erased %u B @ 0x%08x\n", unsigned(how_much), reinterpret_cast<unsigned>(where));
         return std::all_of(reinterpret_cast<const std::uint8_t*>(where),
                            reinterpret_cast<const std::uint8_t*>(where) + how_much,
                            [](std::uint8_t x) { return x == 0xFF; });

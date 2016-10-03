@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cassert>
 #include <cstring>
+#include <cerrno>
 
 
 namespace os
