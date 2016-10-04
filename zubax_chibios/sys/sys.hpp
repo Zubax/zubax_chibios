@@ -121,6 +121,26 @@ public:
     ~CriticalSectionLockerImpl() { chSysRestoreStatusX(st_); }
 };
 
+class TemporaryPriorityChangerImpl
+{
+    volatile const ::tprio_t old_priority_ = chThdGetPriorityX();
+
+public:
+    TemporaryPriorityChangerImpl(const ::tprio_t new_priority)
+    {
+        DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Changing %d --> %d\n",
+                  chThdGetSelfX()->p_name, int(old_priority_), int(new_priority));
+        chibios_rt::BaseThread::setPriority(new_priority);
+    }
+
+    ~TemporaryPriorityChangerImpl()
+    {
+        chibios_rt::BaseThread::setPriority(old_priority_);
+        DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Restored %d\n",
+                  chThdGetSelfX()->p_name, int(old_priority_));
+    }
+};
+
 } // namespace impl_
 
 /**
@@ -134,5 +154,11 @@ using MutexLocker = volatile impl_::MutexLockerImpl;
  * Must be volatile in order to prevent the optimizer from throwing it away.
  */
 using CriticalSectionLocker = volatile impl_::CriticalSectionLockerImpl;
+
+/**
+ * RAII priority adjustment helper.
+ * Must be volatile in order to prevent the optimizer from throwing it away.
+ */
+using TemporaryPriorityChanger = volatile impl_::TemporaryPriorityChangerImpl;
 
 }
