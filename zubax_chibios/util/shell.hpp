@@ -11,8 +11,10 @@
 #pragma once
 
 #include <ch.hpp>
-#include <chprintf.h>
-#include <memstreams.h>
+#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
+# include <chprintf.h>
+# include <memstreams.h>
+#endif
 #include <cstring>
 #include <cstdint>
 #include <cstdio>
