@@ -19,6 +19,9 @@
 #include <cstdarg>
 #include <cassert>
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/heapless.hpp>
+#include <functional>
+
 
 namespace os
 {
@@ -205,9 +208,17 @@ enum class Mode
  */
 template <unsigned MaxCommandHandlers = 10,
           unsigned MaxLineLength = 200,
-          unsigned MaxCommandArguments = 8>
+          unsigned MaxCommandArguments = 8,
+          unsigned MaxPromptLength = 10>
 class Shell
 {
+    using Prompt = heapless::String<MaxPromptLength>;
+
+    using PromptRenderer = std::function<Prompt ()>;
+
+private:
+    const PromptRenderer prompt_renderer_;
+
     ICommandHandler* command_handlers_[MaxCommandHandlers] = {};
 
     char line_buffer_[MaxLineLength + 1] = {};
@@ -277,7 +288,9 @@ class Shell
     }
 
 public:
-    Shell(Mode mode = Mode::Normal) :
+    Shell(PromptRenderer prompt_renderer = []() { return "> "; },
+          Mode mode = Mode::Normal) :
+        prompt_renderer_(prompt_renderer),
         mode_(mode),
         help_command_handler_(command_handlers_, MaxCommandHandlers)
     {
@@ -312,7 +325,7 @@ public:
                 need_prompt_ = false;
                 if (mode_ != Mode::Silent)
                 {
-                    (void)ios.print("> ");
+                    (void)ios.print(prompt_renderer_().c_str());
                 }
             }
 
