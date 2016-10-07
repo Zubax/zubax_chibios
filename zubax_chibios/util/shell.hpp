@@ -66,34 +66,28 @@ public:
     void setChannel(BaseChannel* chan) { channel_ = chan; }
 
     template <unsigned BufferSize = 200, unsigned CharacterTimeoutMSec = DefaultWriteCharacterTimeoutMSec>
-    std::size_t vprint(const char* format, va_list vl)
+    __attribute__ ((format (printf, 2, 3)))     // Position 1 is taken by the implicit this pointer
+    std::size_t print(const char* format, ...)
     {
         char buffer[BufferSize];
+        va_list ap;
+        va_start(ap, format);
 
 #if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
         // Lightweight but limited in functionality
         MemoryStream ms;
         msObjectInit(&ms, reinterpret_cast<std::uint8_t*>(buffer), BufferSize, 0);
         auto chp = reinterpret_cast<::BaseSequentialStream*>(&ms);
-        chvprintf(chp, format, vl);
+        chvprintf(chp, format, ap);
         chSequentialStreamPut(chp, 0);
 #else
         // Full featured but heavy
         using namespace std;
-        vsnprintf(buffer, BufferSize, format, vl);
+        vsnprintf(buffer, BufferSize, format, ap);
 #endif
 
+        va_end(ap);
         return writeExpandingCrLf(CharacterTimeoutMSec, buffer);
-    }
-
-    template <typename... ReferToVPrintForArgs>
-    std::size_t print(const char* format, ...)
-    {
-        va_list vl;
-        va_start(vl, format);
-        const auto ret = vprint<ReferToVPrintForArgs...>(format, vl);
-        va_end(vl);
-        return ret;
     }
 
     void puts(const char* s, unsigned timeout_msec = DefaultWriteCharacterTimeoutMSec)
