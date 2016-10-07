@@ -211,9 +211,10 @@ enum class Mode
 template <unsigned MaxCommandHandlers = 10,
           unsigned MaxLineLength = 200,
           unsigned MaxCommandArguments = 8,
-          unsigned MaxPromptLength = 10>
+          unsigned MaxPromptLength = 40>
 class Shell
 {
+public:
     using Prompt = heapless::String<MaxPromptLength>;
 
     using PromptRenderer = std::function<Prompt ()>;
