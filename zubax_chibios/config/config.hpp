@@ -141,6 +141,15 @@ int init(IStorageBackend* storage);
 unsigned getModificationCounter();
 
 /**
+ * Save configuration into the non-volatile memory.
+ * @return Non-negative on success, negative errno on failure.
+ */
+inline int save()
+{
+    return ::configSave();
+}
+
+/**
  * Allows to read/modify/save/restore commands via CLI
  */
 int executeCLICommand(int argc, char *argv[]);
