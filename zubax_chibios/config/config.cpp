@@ -235,6 +235,11 @@ int configErase(void)
     ASSERT_ALWAYS(_frozen);
     os::MutexLocker locker(_mutex);
     int res = g_storage->erase();
+    if (res >= 0)
+    {
+        reinitializeDefaults();
+        _modification_cnt += 1;
+    }
     return res;
 }
 
