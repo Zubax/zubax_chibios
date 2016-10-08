@@ -63,6 +63,23 @@ __attribute__ ((format (printf, 1, 2)))
 void lowsyslog(const char* format, ...);
 
 /**
+ * A helper that works like @ref lowsyslog() except that it adds the name of the calling module
+ * before the message.
+ */
+class Logger
+{
+    const char* const name_;
+
+public:
+    Logger(const char* module_name) : name_(module_name) { }
+
+    __attribute__ ((format (printf, 2, 3)))
+    void println(const char* format, ...);
+
+    void puts(const char* line);
+};
+
+/**
  * Changes current stdout stream and its write timeout.
  * This setting does not affect @ref lowsyslog().
  */
@@ -123,14 +140,14 @@ public:
 
 class TemporaryPriorityChangerImpl
 {
-    volatile const ::tprio_t old_priority_ = chThdGetPriorityX();
+    volatile const ::tprio_t old_priority_;
 
 public:
-    TemporaryPriorityChangerImpl(const ::tprio_t new_priority)
+    TemporaryPriorityChangerImpl(const ::tprio_t new_priority) :
+        old_priority_(chibios_rt::BaseThread::setPriority(new_priority))
     {
-        DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Changing %d --> %d\n",
+        DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Changed %d --> %d\n",
                   chThdGetSelfX()->p_name, int(old_priority_), int(new_priority));
-        chibios_rt::BaseThread::setPriority(new_priority);
     }
 
     ~TemporaryPriorityChangerImpl()

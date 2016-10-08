@@ -71,15 +71,42 @@ static int genericPrint(::BaseChannel* stream, unsigned timeout_msec, const char
     return writeExpandingCrLf(stream, timeout_msec, buffer);
 }
 
+
+// Lowsyslog config is fixed
+static constexpr unsigned LowsyslogWriteTimeoutMSec = 1000;
+
 void lowsyslog(const char* format, ...)
 {
-    // Lowsyslog config is fixed
-    static constexpr unsigned LowsyslogWriteTimeoutMSec = 1000;
+    va_list vl;
+    va_start(vl, format);
+    genericPrint((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, format, vl);
+    va_end(vl);
+}
+
+
+void Logger::println(const char* format, ...)
+{
+    MutexLocker locker(mutex_);
+
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, name_);
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, ": ");
 
     va_list vl;
     va_start(vl, format);
     genericPrint((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, format, vl);
     va_end(vl);
+
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, "\n");
+}
+
+void Logger::puts(const char* line)
+{
+    MutexLocker locker(mutex_);
+
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, name_);
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, ": ");
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, line);
+    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, "\n");
 }
 
 
