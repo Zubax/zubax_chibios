@@ -77,6 +77,8 @@ public:
     void println(const char* format, ...);
 
     void puts(const char* line);
+
+    const char* getName() const { return name_; }
 };
 
 /**
