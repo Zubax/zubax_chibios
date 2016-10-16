@@ -65,6 +65,8 @@ void __throw_length_error(const char*) { chSysHalt("throw"); }
 
 void __throw_out_of_range(const char*) { chSysHalt("throw"); }
 
+void __throw_out_of_range_fmt(const char*, ...) { chSysHalt("throw"); }
+
 void __throw_runtime_error(const char*) { chSysHalt("throw"); }
 
 void __throw_range_error(const char*) { chSysHalt("throw"); }
