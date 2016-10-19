@@ -16,7 +16,6 @@
 #include <limits>
 #include <cstdint>
 #include <cassert>
-#include "execute_once.hpp"
 
 
 #ifndef STRINGIZE
