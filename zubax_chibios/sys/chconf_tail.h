@@ -163,7 +163,7 @@
  * @note    The default is @p TRUE.
  */
 #ifndef CH_CFG_USE_TM
-#define CH_CFG_USE_TM                       FALSE
+#define CH_CFG_USE_TM                       TRUE
 #endif
 
 /**
@@ -173,7 +173,7 @@
  * @note    The default is @p TRUE.
  */
 #ifndef CH_CFG_USE_REGISTRY
-#define CH_CFG_USE_REGISTRY                 FALSE
+#define CH_CFG_USE_REGISTRY                 TRUE
 #endif
 
 /**
@@ -194,7 +194,7 @@
  * @note    The default is @p TRUE.
  */
 #ifndef CH_CFG_USE_SEMAPHORES
-#define CH_CFG_USE_SEMAPHORES               FALSE
+#define CH_CFG_USE_SEMAPHORES               TRUE
 #endif
 
 /**
@@ -387,7 +387,7 @@
  * @note    The default is @p FALSE.
  */
 #ifndef CH_DBG_STATISTICS
-#define CH_DBG_STATISTICS                   FALSE
+#define CH_DBG_STATISTICS                   TRUE
 #endif
 
 /**
@@ -398,7 +398,7 @@
  * @note    The default is @p FALSE.
  */
 #ifndef CH_DBG_SYSTEM_STATE_CHECK
-#define CH_DBG_SYSTEM_STATE_CHECK           FALSE
+#define CH_DBG_SYSTEM_STATE_CHECK           TRUE
 #endif
 
 /**
@@ -409,7 +409,7 @@
  * @note    The default is @p FALSE.
  */
 #ifndef CH_DBG_ENABLE_CHECKS
-#define CH_DBG_ENABLE_CHECKS                FALSE
+#define CH_DBG_ENABLE_CHECKS                TRUE
 #endif
 
 /**
@@ -421,7 +421,7 @@
  * @note    The default is @p FALSE.
  */
 #ifndef CH_DBG_ENABLE_ASSERTS
-#define CH_DBG_ENABLE_ASSERTS               FALSE
+#define CH_DBG_ENABLE_ASSERTS               TRUE
 #endif
 
 /**
@@ -446,7 +446,7 @@
  *          @p panic_msg variable set to @p NULL.
  */
 #ifndef CH_DBG_ENABLE_STACK_CHECK
-#define CH_DBG_ENABLE_STACK_CHECK           FALSE
+#define CH_DBG_ENABLE_STACK_CHECK           TRUE
 #endif
 
 /**
@@ -472,6 +472,10 @@
  */
 #ifndef CH_DBG_THREADS_PROFILING
 #define CH_DBG_THREADS_PROFILING            FALSE
+#endif
+
+#if CH_DBG_THREADS_PROFILING
+#error "CH_DBG_THREADS_PROFILING is superseded with CH_DBG_STATISTICS"
 #endif
 
 /** @} */
