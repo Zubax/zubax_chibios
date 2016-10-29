@@ -40,9 +40,19 @@ namespace os
 namespace helpers
 {
 /**
+ * Used with @ref LazyConstructor (and possibly something else)
+ */
+enum class MemoryInitializationPolicy
+{
+    NoInit,
+    ZeroFill
+};
+
+/**
  * A regular lazy initialization helper.
  */
-template <typename T>
+template <typename T,
+          MemoryInitializationPolicy MemInitPolicy = MemoryInitializationPolicy::ZeroFill>
 class LazyConstructor
 {
     alignas(T) std::uint8_t pool_[sizeof(T)]{};
@@ -72,7 +82,10 @@ public:
     void construct(Args... args)
     {
         destroy();
-        std::fill(std::begin(pool_), std::end(pool_), 0);
+        if (MemInitPolicy == MemoryInitializationPolicy::ZeroFill)
+        {
+            std::fill(std::begin(pool_), std::end(pool_), 0);
+        }
         ptr_ = new (pool_) T(std::forward<Args>(args)...);
     }
 
