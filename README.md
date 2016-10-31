@@ -1,6 +1,8 @@
 ChibiOS libs
 ============
 
+[![Join the chat at https://gitter.im/Zubax/general](https://img.shields.io/badge/GITTER-join%20chat-green.svg)](https://gitter.im/Zubax/general)
+
 Build system and libraries for ChibiOS-based embedded software.
 
 Basic usage:
