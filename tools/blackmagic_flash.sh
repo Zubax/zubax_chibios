@@ -5,8 +5,19 @@
 # Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
-BM_DEV=$(readlink -f /dev/serial/by-id/usb-Black_Sphere_Technologies_Black_Magic_Probe_*-if00)
-PORT=${1:-$BM_DEV}
+PORT="$1"
+if [ -z "$PORT" ]
+then
+    if [ "$(uname)" == "Darwin" ]
+    then
+        PORT=$(ls /dev/cu.usb[sm][eo][rd][ie][am]* | head -n 1)
+    else
+        PORT=$(readlink -f /dev/serial/by-id/*Black*Magic*Probe*0)
+    fi
+
+    [ -z "$PORT" ] && exit 1
+    echo "Using port: $PORT"
+fi
 
 # Find the firmware ELF
 elf=$(ls -1 ../../build/*.elf)
