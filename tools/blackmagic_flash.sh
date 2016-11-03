@@ -31,7 +31,7 @@ fi
 
 arm-none-eabi-size $elf || exit 1
 
-tmpfile=$(mktemp)
+tmpfile=.blackmagic_gdb.tmp
 cat > $tmpfile <<EOF
 target extended-remote $PORT
 mon swdp_scan
@@ -41,3 +41,5 @@ kill
 EOF
 
 arm-none-eabi-gdb $elf --batch -x $tmpfile
+
+rm -f $tmpfile
