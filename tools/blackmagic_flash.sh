@@ -20,9 +20,9 @@ then
 fi
 
 # Find the firmware ELF
-elf=$(ls -1 ../../build/*.elf)
+elf=$(ls ../../build/*.elf 2>/dev/null)
 if [ -z "$elf" ]; then
-    elf=$(ls -1 build/*.elf)
+    elf=$(ls build/*.elf 2>/dev/null)
 fi
 if [ -z "$elf" ]; then
     echo "No firmware found"
