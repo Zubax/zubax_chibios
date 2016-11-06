@@ -38,6 +38,30 @@ class BaseChannelWrapper
 
     std::size_t writeExpandingCrLf(unsigned character_timeout_msec, const char* str)
     {
+        struct Locker
+        {
+            BaseChannel* const chan;
+            chibios_rt::Mutex* mutex = nullptr;
+
+            Locker(BaseChannel* ch) :
+                chan(ch)
+            {
+                if (os::getStdIOStream() == chan)
+                {
+                    mutex = &os::getStdIOMutex();
+                    mutex->lock();
+                }
+            }
+
+            ~Locker()
+            {
+                if (mutex != nullptr)
+                {
+                    mutex->unlock();
+                }
+            }
+        } locker(channel_);
+
         std::size_t ret = 0;
 
         for (const char* pc = str; *pc != '\0'; pc++)
