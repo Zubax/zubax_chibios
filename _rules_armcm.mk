@@ -86,7 +86,7 @@ USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions -fno-unwind-ta
            $(NO_BUILTIN) -fconserve-stack
 
 # Explicit usage flags are needed for LTO:
-USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit
+USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit -u__errno
 
 # Fixing float constants - otherwise the C++ standard library may fail to compile:
 UDEFS += -fno-single-precision-constant
