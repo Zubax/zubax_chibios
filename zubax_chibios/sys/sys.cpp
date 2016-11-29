@@ -40,7 +40,7 @@ void sleepUntilChTime(systime_t sleep_until)
     if (static_cast<std::make_signed<systime_t>::type>(sleep_until) < 0)
     {
 #if CH_CFG_USE_REGISTRY
-        const char* const name = chThdGetSelfX()->p_name;
+        const char* const name = chThdGetSelfX()->name;
 #else
         const char* const name = "<?>";
 #endif
@@ -87,9 +87,9 @@ void zchSysHaltHook(const char* msg)
     emergencyPrint("\r\nPANIC [");
 #if CH_CFG_USE_REGISTRY
     const thread_t *pthread = chThdGetSelfX();
-    if (pthread && pthread->p_name)
+    if (pthread && pthread->name)
     {
-        emergencyPrint(pthread->p_name);
+        emergencyPrint(pthread->name);
     }
 #endif
     emergencyPrint("] ");

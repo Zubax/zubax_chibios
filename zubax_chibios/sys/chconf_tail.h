@@ -38,6 +38,8 @@
 
 #include "chconf_defaults.h"
 
+#define _CHIBIOS_RT_CONF_
+
 /*===========================================================================*/
 /**
  * @name System timers settings
@@ -314,16 +316,6 @@
 #endif
 
 /**
- * @brief   I/O Queues APIs.
- * @details If enabled then the I/O queues APIs are included in the kernel.
- *
- * @note    The default is @p TRUE.
- */
-#ifndef CH_CFG_USE_QUEUES
-#define CH_CFG_USE_QUEUES                   TRUE
-#endif
-
-/**
  * @brief   Core Memory Manager APIs.
  * @details If enabled then the core memory manager APIs are included
  *          in the kernel.
@@ -534,6 +526,24 @@
 #endif
 
 /**
+ * @brief   ISR enter hook.
+ */
+#ifndef CH_CFG_IRQ_PROLOGUE_HOOK
+#define CH_CFG_IRQ_PROLOGUE_HOOK() {                                        \
+  /* IRQ prologue code here.*/                                              \
+}
+#endif
+
+/**
+ * @brief   ISR exit hook.
+ */
+#ifndef CH_CFG_IRQ_EPILOGUE_HOOK
+#define CH_CFG_IRQ_EPILOGUE_HOOK() {                                        \
+  /* IRQ epilogue code here.*/                                              \
+}
+#endif
+
+/**
  * @brief   Idle thread enter hook.
  * @note    This hook is invoked within a critical zone, no OS functions
  *          should be invoked from here.
@@ -584,6 +594,17 @@
 // Defined in Zubax ChibiOS
 #ifndef CH_CFG_SYSTEM_HALT_HOOK
 # error CH_CFG_SYSTEM_HALT_HOOK should be defined by Zubax ChibiOS
+#endif
+
+/**
+ * @brief   Trace hook.
+ * @details This hook is invoked each time a new record is written in the
+ *          trace buffer.
+ */
+#ifndef CH_CFG_TRACE_HOOK
+#define CH_CFG_TRACE_HOOK(tep) {                                            \
+  /* Trace code here.*/                                                     \
+}
 #endif
 
 /** @} */

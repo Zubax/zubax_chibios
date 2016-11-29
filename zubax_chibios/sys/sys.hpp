@@ -148,14 +148,14 @@ public:
         old_priority_(chibios_rt::BaseThread::setPriority(new_priority))
     {
         DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Changed %d --> %d\n",
-                  chThdGetSelfX()->p_name, int(old_priority_), int(new_priority));
+                  chThdGetSelfX()->name, int(old_priority_), int(new_priority));
     }
 
     ~TemporaryPriorityChangerImpl()
     {
         chibios_rt::BaseThread::setPriority(old_priority_);
         DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Restored %d\n",
-                  chThdGetSelfX()->p_name, int(old_priority_));
+                  chThdGetSelfX()->name, int(old_priority_));
     }
 };
 

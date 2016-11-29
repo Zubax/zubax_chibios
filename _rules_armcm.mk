@@ -39,6 +39,14 @@ ifndef SERIAL_CLI_PORT_NUMBER
     $(error SERIAL_CLI_PORT_NUMBER must be assigned an integer value greater than zero)
 endif
 
+ifndef USE_PROCESS_STACKSIZE
+    $(error USE_PROCESS_STACKSIZE is not defined)
+endif
+
+ifndef USE_EXCEPTIONS_STACKSIZE
+    $(error USE_EXCEPTIONS_STACKSIZE is not defined)
+endif
+
 UDEFS += -DSTDOUT_SD=SD$(SERIAL_CLI_PORT_NUMBER) -DSTDIN_SD=STDOUT_SD -DSERIAL_CLI_PORT_NUMBER=$(SERIAL_CLI_PORT_NUMBER)
 
 UDEFS += -DCORTEX_ENABLE_WFI_IDLE=1 -DCHPRINTF_USE_FLOAT=1
@@ -46,26 +54,29 @@ UDEFS += -DCORTEX_ENABLE_WFI_IDLE=1 -DCHPRINTF_USE_FLOAT=1
 USE_LINK_GC = yes
 USE_THUMB ?= yes
 USE_VERBOSE_COMPILE ?= no
+USE_SMART_BUILD ?= no
 
 CHIBIOS := $(ZUBAX_CHIBIOS_DIR)/chibios
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/rt/rt.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/various/cpp_wrappers/chcpp.mk
+include $(CHIBIOS)/os/hal/lib/streams/streams.mk
 
+VARIOUSSRC = $(STREAMSSRC) \
+             $(CHIBIOS)/os/various/syscalls.c
 
-VARIOUSSRC = $(CHIBIOS)/os/various/syscalls.c            \
-             $(CHIBIOS)/os/hal/lib/streams/chprintf.c    \
-             $(CHIBIOS)/os/hal/lib/streams/memstreams.c
+VARIOUSINC = $(STREAMSINC)
 
 CSRC += $(STARTUPSRC) $(KERNSRC) $(PORTSRC) $(OSALSRC) $(HALSRC) $(PLATFORMSRC) $(VARIOUSSRC)
 
 CPPSRC += $(CHCPPSRC)
 
-ASMSRC += $(STARTUPASM) $(PORTASM) $(OSALASM)
+ASMXSRC += $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPINC) $(OSALINC) \
-          $(CHIBIOS)/os/various $(CHIBIOS)/os/hal/lib/streams
+INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPINC) $(OSALINC) $(VARIOUSINC) \
+          $(CHIBIOS)/os/various \
+          $(CHIBIOS)/os/license
 
 #
 # OS optional components
@@ -73,7 +84,9 @@ INCDIR += $(PORTINC) $(KERNINC) $(HALINC) $(PLATFORMINC) $(CHCPPINC) $(STARTUPIN
 
 BUILD_CHIBIOS_SHELL ?= 0
 ifneq ($(BUILD_CHIBIOS_SHELL),0)
-    VARIOUSSRC += $(CHIBIOS)/os/various/shell.c
+	include $(CHIBIOS)/os/various/shell/shell.mk
+    VARIOUSSRC += $(SHELLSRC)
+    VARIOUSINC += $(SHELLINC)
 endif
 
 #
@@ -136,4 +149,4 @@ CPPWARN += -Wundef -Wall -Wextra -Werror
 # asm statement fix
 DDEFS += -Dasm=__asm
 
-include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/rules.mk
+include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/rules.mk
