@@ -37,7 +37,7 @@ constexpr static inline std::size_t predictEncodedDataLength(const std::size_t n
  *
  * @param input         Binary input to be encoded.
  *                      Requirements:
- *                        - Applicability of std::begin()
+ *                        - Method cbegin()
  *                        - Method size()
  *
  * @param output_buffer Output string will be written here.
@@ -50,7 +50,7 @@ static const char* encode(const Container& input, char* const output_buffer)
 {
     static const char* const Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    auto in = std::begin(input);
+    auto in = input.cbegin();
     char* out = &output_buffer[0];
 
     for (std::size_t i = 0; i < input.size() / 3U; i++)
