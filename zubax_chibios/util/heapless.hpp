@@ -109,6 +109,9 @@ inline auto intToString(T number)
         const char* c_str() const { return &storage_[offset_]; }
 
         operator const char* () const { return this->c_str(); }
+
+        std::uint_fast16_t length() const { return std::uint_fast16_t(MaxChars - offset_); }
+        std::uint_fast16_t size() const { return length(); }
     };
 
     return Container(number);
