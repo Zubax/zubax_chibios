@@ -154,12 +154,12 @@ public:
      * Formatting
      */
     template <typename... Args>
-    auto format(Args... format_args) const
+    auto format(Args&&... format_args) const
     {
         String<(DefaultStringCapacity > Capacity) ? DefaultStringCapacity : Capacity> output;
 
         using namespace std;
-        const int res = snprintf(output.begin(), output.capacity(), this->c_str(), format_args...);
+        const int res = snprintf(output.begin(), output.capacity(), this->c_str(), std::forward<Args>(format_args)...);
         if (res > 0)
         {
             output.len_ = std::min(output.capacity(), unsigned(res));
@@ -243,10 +243,10 @@ public:
     }
 
     template <typename T, typename... Args>
-    void concatenate(const T& head, Args... tail)
+    void concatenate(const T& head, Args&&... tail)
     {
         this->append(head);
-        this->concatenate(tail...);
+        this->concatenate(std::forward<Args>(tail)...);
     }
 
     char&       front()       { return operator[](0); }
@@ -353,9 +353,9 @@ public:
         Formatter(const char* format_string) : format_string(format_string) { }
 
         template <typename... Args>
-        auto operator()(Args... format_args)
+        auto operator()(Args&&... format_args)
         {
-            return format_string.format(format_args...);
+            return format_string.format(std::forward<Args>(format_args)...);
         }
     };
 };
@@ -417,9 +417,9 @@ inline auto operator "" _format(const char* str, std::size_t)
  *      conat auto str = format("The %s answer is %d!", "Great", 42);
  */
 template<unsigned FormatLength, typename... Args>
-inline auto format(const char (&format_string)[FormatLength], Args... format_args)
+inline auto format(const char (&format_string)[FormatLength], Args&&... format_args)
 {
-    return String<FormatLength>(format_string).format(format_args...);
+    return String<FormatLength>(format_string).format(std::forward<Args>(format_args)...);
 }
 
 /**
@@ -429,10 +429,10 @@ inline auto format(const char (&format_string)[FormatLength], Args... format_arg
  *      auto str = concatenate("The Great Answer is", 42, "!\n");
  */
 template <unsigned Capacity = DefaultStringCapacity, typename... Args>
-inline auto concatenate(Args... arguments)
+inline auto concatenate(Args&&... arguments)
 {
     String<Capacity> s;
-    s.concatenate(arguments...);
+    s.concatenate(std::forward<Args>(arguments)...);
     return s;
 }
 
