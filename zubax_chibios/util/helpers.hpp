@@ -55,6 +55,18 @@ template <typename T,
           MemoryInitializationPolicy MemInitPolicy = MemoryInitializationPolicy::ZeroFill>
 class LazyConstructor
 {
+    /*
+     * TODO: This class should be made copyable.
+     * It can be made copyable if we proxied the calls to the copy constructor and the assignment operator into the
+     * contained type. It should be easy to do. For now we disabled copying, because the contained class may be
+     * non-invariant to its memory location (e.g. it could contain pointers to its internal data, or it could be
+     * referred to from outside, etc).
+     */
+    LazyConstructor(const volatile LazyConstructor&) = delete;
+    LazyConstructor(const volatile LazyConstructor&&) = delete;
+    LazyConstructor& operator=(const volatile LazyConstructor&) = delete;
+    LazyConstructor& operator=(const volatile LazyConstructor&&) = delete;
+
     alignas(T) std::uint8_t pool_[sizeof(T)]{};
     T* ptr_ = nullptr;
 
@@ -64,6 +76,8 @@ class LazyConstructor
     }
 
 public:
+    LazyConstructor() { }
+
     ~LazyConstructor()
     {
         destroy();
