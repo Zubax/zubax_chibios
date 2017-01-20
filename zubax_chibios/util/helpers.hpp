@@ -34,6 +34,12 @@
     static bool EXECUTE_ONCE_CAT1_(_executed_once_, __LINE__) = false; \
     for (; EXECUTE_ONCE_CAT1_(_executed_once_, __LINE__) == false; EXECUTE_ONCE_CAT1_(_executed_once_, __LINE__) = true)
 
+/**
+ * Branching hints; these are compiler-dependent.
+ */
+#define LIKELY(x)       (__builtin_expect((x), true))
+#define UNLIKELY(x)     (__builtin_expect((x), false))
+
 
 namespace os
 {

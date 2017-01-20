@@ -36,11 +36,6 @@
         }                                                   \
     } while (0)
 
-
-#define LIKELY(x)       (__builtin_expect((x), true))
-#define UNLIKELY(x)     (__builtin_expect((x), false))
-
-
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
 # define DEBUG_LOG(...)         ::os::lowsyslog(__VA_ARGS__)
 #else
