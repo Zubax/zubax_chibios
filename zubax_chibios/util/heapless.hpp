@@ -347,7 +347,7 @@ public:
     {
         String<Capacity> format_string;
 
-        Formatter(const char* format_string) : format_string(format_string) { }
+        Formatter(const char* fmt) : format_string(fmt) { }
 
         template <typename... Args>
         auto operator()(Args... format_args)
