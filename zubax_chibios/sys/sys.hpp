@@ -147,15 +147,19 @@ public:
     TemporaryPriorityChangerImpl(const ::tprio_t new_priority) :
         old_priority_(chibios_rt::BaseThread::setPriority(new_priority))
     {
+#if CH_CFG_USE_REGISTRY
         DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Changed %d --> %d\n",
                   chThdGetSelfX()->p_name, int(old_priority_), int(new_priority));
+#endif
     }
 
     ~TemporaryPriorityChangerImpl()
     {
         chibios_rt::BaseThread::setPriority(old_priority_);
+#if CH_CFG_USE_REGISTRY
         DEBUG_LOG("OS: TemporaryPriorityChanger[%s]: Restored %d\n",
                   chThdGetSelfX()->p_name, int(old_priority_));
+#endif
     }
 };
 

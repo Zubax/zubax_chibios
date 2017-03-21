@@ -11,12 +11,26 @@
 
 void* operator new(size_t sz)
 {
+#if CH_CFG_USE_MEMCORE
     return chCoreAlloc(sz);
+#else
+    (void) sz;
+    chSysHalt("new");
+    static int dummy = 0;
+    return &dummy;
+#endif
 }
 
 void* operator new[](size_t sz)
 {
+#if CH_CFG_USE_MEMCORE
     return chCoreAlloc(sz);
+#else
+    (void) sz;
+    chSysHalt("new");
+    static int dummy = 0;
+    return &dummy;
+#endif
 }
 
 void operator delete(void*)

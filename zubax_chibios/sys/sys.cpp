@@ -100,6 +100,7 @@ void zchSysHaltHook(const char* msg)
     }
     emergencyPrint("\r\n");
 
+#if !defined(AGGRESSIVE_SIZE_OPTIMIZATION) || (AGGRESSIVE_SIZE_OPTIMIZATION == 0)
     static const auto print_register = [](const char* name, std::uint32_t value)
         {
             emergencyPrint(name);
@@ -159,6 +160,7 @@ void zchSysHaltHook(const char* msg)
     PRINT_SCB_REGISTER(BFAR);
     PRINT_SCB_REGISTER(AFSR);
 #undef PRINT_SCB_REGISTER
+#endif      // AGGRESSIVE_SIZE_OPTIMIZATION
 
     /*
      * Emulating a breakpoint if we're in debug mode
@@ -199,7 +201,13 @@ unsigned sleep(unsigned int seconds)
 
 void* malloc(size_t sz)
 {
+#if CH_CFG_USE_MEMCORE
     return chCoreAlloc(sz);
+#else
+    (void) sz;
+    chSysHalt("malloc");
+    return nullptr;
+#endif
 }
 
 void* calloc(size_t, size_t)
