@@ -73,7 +73,11 @@ class FlashWriter
         }
     };
 
-    /// Returns negative if there's no match
+    /**
+     * This function maps an arbitrary address onto a flash sector number.
+     * It need not be implemented for MCU which do not require sector numbers for operations on flash.
+     * Returns negative if there's no match.
+     */
     static int mapAddressToSectorNumber(const std::size_t where)
     {
         if (where < 0x08000000)
@@ -83,16 +87,16 @@ class FlashWriter
 
 #if defined(STM32F446xx)
         // 16K
-        if (where < 0x08003FFF) { return 0; }
-        if (where < 0x08007FFF) { return 1; }
-        if (where < 0x0800BFFF) { return 2; }
-        if (where < 0x0800FFFF) { return 3; }
+        if (where <= 0x08003FFF) { return 0; }
+        if (where <= 0x08007FFF) { return 1; }
+        if (where <= 0x0800BFFF) { return 2; }
+        if (where <= 0x0800FFFF) { return 3; }
         // 64K
-        if (where < 0x0801FFFF) { return 4; }
+        if (where <= 0x0801FFFF) { return 4; }
         // 128K
-        if (where < 0x0803FFFF) { return 5; }
-        if (where < 0x0805FFFF) { return 6; }
-        if (where < 0x0807FFFF) { return 7; }
+        if (where <= 0x0803FFFF) { return 5; }
+        if (where <= 0x0805FFFF) { return 6; }
+        if (where <= 0x0807FFFF) { return 7; }
 #else
         assert(false);
 #endif
@@ -158,7 +162,7 @@ public:
         {
             Prologuer prologuer;
             FLASH->CR = FLASH_CR_PER;
-            FLASH->AR = page_address;
+            FLASH->AR = reinterpret_cast<std::uint32_t>(where);
             FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
             waitReady();
             FLASH->CR = 0;
