@@ -154,18 +154,34 @@ public:
                const std::size_t how_much)
     {
 #if defined(FLASH_CR_PER)
-        constexpr unsigned SmallestPageSize = 512;
-
-        for (std::size_t location = reinterpret_cast<std::size_t>(where);
-             location < (reinterpret_cast<std::size_t>(where) + how_much);
-             location += SmallestPageSize)
+        for (std::size_t blank_check_pos = reinterpret_cast<std::size_t>(where);
+            blank_check_pos < (reinterpret_cast<std::size_t>(where) + how_much);
+            blank_check_pos++)
         {
-            Prologuer prologuer;
-            FLASH->CR = FLASH_CR_PER;
-            FLASH->AR = reinterpret_cast<std::uint32_t>(where);
-            FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
-            waitReady();
-            FLASH->CR = 0;
+            if (*reinterpret_cast<const std::uint8_t*>(blank_check_pos) != 0xFF)
+            {
+                DEBUG_LOG("Erasing page @ %x... ", blank_check_pos);
+
+                // Erase operation
+                {
+                    Prologuer prologuer;
+                    FLASH->CR = FLASH_CR_PER;
+                    FLASH->AR = blank_check_pos;
+                    FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
+                    waitReady();
+                    FLASH->CR = 0;
+                }
+
+                // Immediate blank check
+                if (*reinterpret_cast<const std::uint8_t*>(blank_check_pos) != 0xFF)
+                {
+                    // Interrupt immediately, otherwise we'll be stuck here erasing each byte unsuccessfully
+                    DEBUG_LOG("Page erase FAILED\n");
+                    return false;
+                }
+
+                DEBUG_LOG("Page erase OK\n");
+            }
         }
 #else
         constexpr unsigned SmallestSectorSize = 1024;
