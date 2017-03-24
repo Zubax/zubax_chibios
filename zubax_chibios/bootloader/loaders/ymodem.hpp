@@ -13,6 +13,8 @@
 #include <utility>
 
 
+namespace os
+{
 namespace bootloader
 {
 namespace ymodem_loader
@@ -104,5 +106,6 @@ public:
     int download(IDownloadStreamSink& sink) override;
 };
 
+}
 }
 }

@@ -9,6 +9,8 @@
 #include <zubax_chibios/util/heapless.hpp>
 
 
+namespace os
+{
 namespace bootloader
 {
 /*
@@ -277,4 +279,5 @@ int Bootloader::upgradeApp(IDownloader& downloader)
     return ErrOK;
 }
 
+}
 }

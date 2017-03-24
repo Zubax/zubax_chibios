@@ -15,6 +15,8 @@
 #include "util.hpp"
 
 
+namespace os
+{
 namespace bootloader
 {
 /**
@@ -254,3 +256,4 @@ auto makeAppSharedMarshaller(RegisterPointers... pointers)
 
 } // namespace app_shared
 } // namespace bootloader
+} // namespace os

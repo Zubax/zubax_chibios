@@ -11,6 +11,8 @@
 #include <cassert>
 
 
+namespace os
+{
 namespace bootloader
 {
 /**
@@ -60,4 +62,5 @@ public:
     std::uint64_t get() const { return crc_ ^ 0xFFFFFFFFFFFFFFFFULL; }
 };
 
+}
 }

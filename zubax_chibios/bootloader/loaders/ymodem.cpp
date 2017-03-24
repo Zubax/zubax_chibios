@@ -15,6 +15,8 @@
 #undef CAN
 #endif
 
+namespace os
+{
 namespace bootloader
 {
 namespace ymodem_loader
@@ -498,5 +500,6 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
     return ErrOK;
 }
 
+}
 }
 }

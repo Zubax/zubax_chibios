@@ -14,6 +14,8 @@
 #include "util.hpp"
 
 
+namespace os
+{
 namespace bootloader
 {
 /**
@@ -194,4 +196,5 @@ public:
     int upgradeApp(IDownloader& downloader);
 };
 
+}
 }
