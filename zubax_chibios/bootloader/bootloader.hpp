@@ -24,11 +24,11 @@ namespace bootloader
  */
 enum class State
 {
-    NoAppToBoot,         //!< NoAppToBoot
-    BootDelay,           //!< BootDelay
-    BootCancelled,       //!< BootCancelled
-    AppUpgradeInProgress,//!< AppUpgradeInProgress
-    ReadyToBoot,         //!< ReadyToBoot
+    NoAppToBoot,
+    BootDelay,
+    BootCancelled,
+    AppUpgradeInProgress,
+    ReadyToBoot,
 };
 
 static inline const char* stateToString(State state)
