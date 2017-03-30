@@ -193,12 +193,15 @@ public:
 
     void append(const char* p)
     {
-        while ((*p != '\0') && (len_ < Capacity))
+        if (p != nullptr)
         {
-            buf_[len_++] = *p++;
+            while ((*p != '\0') && (len_ < Capacity))
+            {
+                buf_[len_++] = *p++;
+            }
+            buf_[len_] = '\0';
+            assert(buf_[Capacity] == '\0');
         }
-        buf_[len_] = '\0';
-        assert(buf_[Capacity] == '\0');
     }
 
     void append(char p)
@@ -271,7 +274,14 @@ public:
 
     bool compare(const char* s) const
     {
-        return 0 == std::strncmp(this->c_str(), s, Capacity);
+        if (s != nullptr)
+        {
+            return 0 == std::strncmp(this->c_str(), s, Capacity);
+        }
+        else
+        {
+            return false;
+        }
     }
 
     /*
