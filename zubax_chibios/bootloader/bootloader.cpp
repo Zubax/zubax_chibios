@@ -45,7 +45,7 @@ std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
             {
                 break;
             }
-            if (!desc.isValid())
+            if (!desc.isValid(max_application_image_size_))
             {
                 continue;
             }
@@ -111,8 +111,11 @@ void Bootloader::verifyAppAndUpdateState()
     }
 }
 
-Bootloader::Bootloader(IAppStorageBackend& backend, unsigned boot_delay_msec) :
+Bootloader::Bootloader(IAppStorageBackend& backend,
+                       std::uint32_t max_application_image_size,
+                       unsigned boot_delay_msec) :
     backend_(backend),
+    max_application_image_size_(max_application_image_size),
     boot_delay_msec_(boot_delay_msec)
 {
     os::MutexLocker mlock(mutex_);

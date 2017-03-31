@@ -130,6 +130,7 @@ class Bootloader
     State state_;
     IAppStorageBackend& backend_;
 
+    const std::uint32_t max_application_image_size_;
     const unsigned boot_delay_msec_;
     ::systime_t boot_delay_started_at_st_;
 
@@ -149,11 +150,11 @@ class Bootloader
             return {'A','P','D','e','s','c','0','0'};
         }
 
-        bool isValid() const
+        bool isValid(const std::uint32_t max_application_image_size) const
         {
             const auto sgn = getSignatureValue();
             return std::equal(std::begin(signature), std::end(signature), std::begin(sgn)) &&
-                   (app_info.image_size > 0) && (app_info.image_size < 0xFFFFFFFFU);
+                   (app_info.image_size > 0) && (app_info.image_size < max_application_image_size);
         }
     };
     static_assert(sizeof(AppDescriptor) == 32, "Invalid packing");
@@ -165,8 +166,17 @@ class Bootloader
 public:
     /**
      * Time since boot will be measured starting from the moment when the object was constructed.
+     *
+     * The max application image size parameter is very important for performance reasons;
+     * without it, the bootloader may encounter an unrelated data structure in the ROM that looks like a
+     * valid app descriptor (by virtue of having the same signature, which is only 64 bit long),
+     * and it may spend a considerable amount of time trying to check the CRC that is certainly invalid.
+     * Having an upper size limit for the application image allows the bootloader to weed out too large
+     * values early, greatly improving robustness.
      */
-    Bootloader(IAppStorageBackend& backend, unsigned boot_delay_msec = DefaultBootDelayMSec);
+    Bootloader(IAppStorageBackend& backend,
+               std::uint32_t max_application_image_size = 0xFFFFFFFFU,
+               unsigned boot_delay_msec = DefaultBootDelayMSec);
 
     /**
      * @ref State.
