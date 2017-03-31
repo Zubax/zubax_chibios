@@ -299,8 +299,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     {
         using namespace impl_;
 
-        logger_.puts("1Hz");
-
         canardCleanupStaleTransfers(&canard_, getMonotonicTimestampUSec());
 
         // NodeStatus broadcasting
@@ -465,8 +463,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
             std::memmove(&allocation_request[1], &local_unique_id_[node_id_allocation_unique_id_offset_], uid_size);
 
-            logger_.println("NID alloc bc offs %u", node_id_allocation_unique_id_offset_);
-
             // Broadcasting the request
             const int bcast_res = canardBroadcast(&canard_,
                                                   dsdl::NodeIDAllocation::DataTypeSignature,
@@ -522,16 +518,14 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         confirmed_local_node_id_ = canardGetLocalNodeID(&canard_);
         logger_.println("Node ID: %u", unsigned(confirmed_local_node_id_));
 
+        using namespace impl_;
+
         /*
          * Update loop; run forever because there's nothing else to do
          */
         while (!os::isRebootRequested())
         {
             assert((confirmed_local_node_id_ > 0) && (canardGetLocalNodeID(&canard_) > 0));
-
-            // TODO: THIS IS A STUB
-            ::sleep(1);
-            chibios_rt::System::halt("DONE");
 
             /*
              * Waiting for the firmware update request
@@ -541,7 +535,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 logger_.puts("Waiting for FW update request...");
                 while ((!os::isRebootRequested()) && (remote_server_node_id_ == 0))
                 {
-                    chThdSleepMilliseconds(100);
+                    poll();
                 }
             }
 
@@ -556,14 +550,27 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             /*
              * Rewriting the old firmware with the new file
              */
+            node_mode_ = dsdl::NodeMode::SoftwareUpdate;
+            node_health_ = dsdl::NodeHealth::Ok;
+
             const int result = bootloader_.upgradeApp(*this);
 
             logger_.println("FW downloaded, result %d", int(result));
+
+            if (result >= 0)
+            {
+                node_health_ = dsdl::NodeHealth::Ok;
+            }
+            else
+            {
+                node_health_ = dsdl::NodeHealth::Error;
+            }
 
             /*
              * Reset everything to zero and loop again, because there's nothing else to do.
              * The outer logic will request reboot if necessary.
              */
+            node_mode_ = dsdl::NodeMode::Maintenance;
             remote_server_node_id_ = 0;
             firmware_file_path_.clear();
         }
