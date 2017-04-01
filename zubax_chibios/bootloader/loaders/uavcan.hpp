@@ -721,8 +721,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             /*
              * Send request
              */
-            const std::uint64_t response_deadline =
-                getMonotonicTimestampUSec() + ServiceRequestTimeoutMillisecond * 1000;
             {
                 std::uint8_t buffer[dsdl::FileRead::MaxSizeBytesRequest]{};
                 canardEncodeScalar(buffer, 0, 40, &offset);
@@ -747,7 +745,11 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             /*
              * Await response
              */
+            const std::uint64_t response_deadline =
+                getMonotonicTimestampUSec() + ServiceRequestTimeoutMillisecond * 1000;
+
             read_result_ = std::numeric_limits<int>::max();
+
             while (read_result_ == std::numeric_limits<int>::max())
             {
                 poll();
