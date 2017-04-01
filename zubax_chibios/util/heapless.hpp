@@ -66,6 +66,8 @@ inline auto intToString(T number)
         Container(T x) :
             offset_(MaxChars)          // Field initialization is not working in GCC in this context, not sure why.
         {
+            const bool negative = std::is_signed<T>::value && (x < 0);
+
             storage_[offset_] = '\0';
 
             do
@@ -97,7 +99,7 @@ inline auto intToString(T number)
             }
             while (x != 0);
 
-            if (std::is_signed<T>::value && (x < 0))    // Should be optimized with constexpr if.
+            if (negative)    // Should be optimized with constexpr if.
             {
                 assert(offset_ > 0);
                 storage_[--offset_] = '-';
