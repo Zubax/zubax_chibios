@@ -227,24 +227,36 @@ int Bootloader::upgradeApp(IDownloader& downloader)
      */
     class Sink : public IDownloadStreamSink
     {
-        std::size_t offset_ = 0;
         IAppStorageBackend& backend_;
         chibios_rt::Mutex& mutex_;
+        const std::size_t max_image_size_;
+        std::size_t offset_ = 0;
 
         int handleNextDataChunk(const void* data, std::size_t size) override
         {
             os::MutexLocker mlock(mutex_);
-            int res = backend_.write(offset_, data, size);
-            offset_ += size;
-            return res;
+
+            if ((offset_ + size) <= max_image_size_)
+            {
+                int res = backend_.write(offset_, data, size);
+                offset_ += size;
+                return res;
+            }
+            else
+            {
+                return -ErrAppImageTooLarge;
+            }
         }
 
     public:
-        Sink(IAppStorageBackend& back, chibios_rt::Mutex& mutex) :
+        Sink(IAppStorageBackend& back,
+             chibios_rt::Mutex& mutex,
+             std::size_t max_image_size) :
             backend_(back),
-            mutex_(mutex)
+            mutex_(mutex),
+            max_image_size_(max_image_size)
         { }
-    } sink(backend_, mutex_);
+    } sink(backend_, mutex_, max_application_image_size_);
 
     int res = downloader.download(sink);
     DEBUG_LOG("App download finished with status %d\n", res);

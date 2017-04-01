@@ -21,6 +21,7 @@ namespace bootloader
  */
 static constexpr std::int16_t ErrOK                     = 0;
 static constexpr std::int16_t ErrInvalidState           = 10001;
+static constexpr std::int16_t ErrAppImageTooLarge       = 10002;
 
 /**
  * This is used to verify integrity of the application and other data.
