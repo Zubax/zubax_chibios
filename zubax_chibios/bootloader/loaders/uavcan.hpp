@@ -726,6 +726,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             const std::size_t total_size = 41 + hw_info_.certificate_of_authenticity_length + node_name_.length();
             assert(total_size <= dsdl::GetNodeInfo::MaxSizeBytesResponse);
 
+            // No need to release the transfer payload, it's empty
             const int resp_res = canardRequestOrRespond(&canard_,
                                                         transfer->source_node_id,
                                                         dsdl::GetNodeInfo::DataTypeSignature,
@@ -747,23 +748,77 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         if ((transfer->transfer_type == CanardTransferTypeRequest) &&
             (transfer->data_type_id == dsdl::RestartNode::DataTypeID))
         {
+            std::uint8_t response = 0;                          // 1 - ok, 0 - rejected
+
             std::uint64_t magic_number = 0;
             (void) canardDecodeScalar(transfer, 0, 40, false, &magic_number);
+
             if (magic_number == 0xACCE551B1E)
             {
-                std::uint8_t response = 1 << 7;                 // 1 - ok, 0 - rejected
-                (void) canardRequestOrRespond(&canard_,
-                                              transfer->source_node_id,
-                                              dsdl::RestartNode::DataTypeSignature,
-                                              dsdl::RestartNode::DataTypeID,
-                                              &transfer->transfer_id,
-                                              transfer->priority,
-                                              CanardResponse,
-                                              &response,
-                                              1);
+                response = 1 << 7;
                 // TODO: Delegate the decision to the application via callback
                 os::requestReboot();
             }
+
+            // No need to release the transfer payload, it's single frame anyway
+            (void) canardRequestOrRespond(&canard_,
+                                          transfer->source_node_id,
+                                          dsdl::RestartNode::DataTypeSignature,
+                                          dsdl::RestartNode::DataTypeID,
+                                          &transfer->transfer_id,
+                                          transfer->priority,
+                                          CanardResponse,
+                                          &response,
+                                          1);
+        }
+
+        /*
+         * BeginFirmwareUpdate request.
+         */
+        if ((transfer->transfer_type == CanardTransferTypeRequest) &&
+            (transfer->data_type_id == dsdl::BeginFirmwareUpdate::DataTypeID))
+        {
+            std::uint8_t error = 0;
+
+            if (remote_server_node_id_ == 0)
+            {
+                // Determine the node ID of the firmware server
+                (void) canardDecodeScalar(transfer, 0, 8, false, &remote_server_node_id_);
+                if ((remote_server_node_id_ == 0) ||
+                    (remote_server_node_id_ >= CANARD_MAX_NODE_ID))
+                {
+                    remote_server_node_id_ = transfer->source_node_id;
+                }
+
+                // Copy the path
+                firmware_file_path_.clear();
+                for (unsigned i = 0;
+                     i < std::min(transfer->payload_len - 1U,
+                                  firmware_file_path_.capacity());
+                     i++)
+                {
+                    char val = '\0';
+                    (void) canardDecodeScalar(transfer, i * 8 + 8, 8, false, &val);
+                    firmware_file_path_.push_back(val);
+                }
+
+                error = 0;
+            }
+            else
+            {
+                error = 2;      // Already in progress
+            }
+
+            canardReleaseRxTransferPayload(&canard_, transfer);
+            (void) canardRequestOrRespond(&canard_,
+                                          transfer->source_node_id,
+                                          dsdl::BeginFirmwareUpdate::DataTypeSignature,
+                                          dsdl::BeginFirmwareUpdate::DataTypeID,
+                                          &transfer->transfer_id,
+                                          transfer->priority,
+                                          CanardResponse,
+                                          &error,
+                                          1);
         }
     }
 
