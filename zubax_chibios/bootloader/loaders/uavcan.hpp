@@ -168,6 +168,7 @@ using RestartNode               = ServiceTypeInfo<5,     0x569e05394a3017f0,    
 enum class NodeHealth : std::uint8_t
 {
     Ok = 0,
+    Warning = 1,
     Error = 2
 };
 
@@ -262,8 +263,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     std::uint64_t send_next_node_id_allocation_request_at_ = 0;
     std::uint8_t node_id_allocation_unique_id_offset_ = 0;
 
-    impl_::dsdl::NodeHealth node_health_ = impl_::dsdl::NodeHealth::Ok;
-    impl_::dsdl::NodeMode node_mode_     = impl_::dsdl::NodeMode::Maintenance;
     std::uint16_t vendor_specific_status_ = 0;
 
     std::uint8_t node_status_transfer_id_ = 0;
@@ -293,10 +292,48 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     void makeNodeStatusMessage(std::uint8_t* buffer) const
     {
         std::memset(buffer, 0, impl_::dsdl::NodeStatus::MaxSizeBytes);
+
         const std::uint32_t uptime_sec = (timekeeper_.getUptimeMicroseconds() + 500000UL) / 1000000UL;
+
+        /*
+         * Bootloader State        Node Mode       Node Health
+         * ----------------------------------------------------
+         * NoAppToBoot             Maintenance     Error
+         * BootDelay               Maintenance     Ok
+         * BootCancelled           Maintenance     Warning
+         * AppUpgradeInProgress    SoftwareUpdate  Ok
+         * ReadyToBoot             Maintenance     Ok
+         */
+        std::uint8_t node_health = std::uint8_t(impl_::dsdl::NodeHealth::Ok);
+        std::uint8_t node_mode   = std::uint8_t(impl_::dsdl::NodeMode::Maintenance);
+
+        switch (bootloader_.getState())
+        {
+        case State::NoAppToBoot:
+        {
+            node_health = std::uint8_t(impl_::dsdl::NodeHealth::Error);
+            break;
+        }
+        case State::AppUpgradeInProgress:
+        {
+            node_mode = std::uint8_t(impl_::dsdl::NodeMode::SoftwareUpdate);
+            break;
+        }
+        case State::BootCancelled:
+        {
+            node_health = std::uint8_t(impl_::dsdl::NodeHealth::Warning);
+            break;
+        }
+        case State::BootDelay:
+        case State::ReadyToBoot:
+        {
+            break;
+        }
+        }
+
         canardEncodeScalar(buffer,  0, 32, &uptime_sec);
-        canardEncodeScalar(buffer, 32,  2, &node_health_);
-        canardEncodeScalar(buffer, 34,  3, &node_mode_);
+        canardEncodeScalar(buffer, 32,  2, &node_health);
+        canardEncodeScalar(buffer, 34,  3, &node_mode);
         canardEncodeScalar(buffer, 40, 16, &vendor_specific_status_);
     }
 
@@ -626,29 +663,30 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             /*
              * Rewriting the old firmware with the new file
              */
-            node_mode_ = dsdl::NodeMode::SoftwareUpdate;
-            node_health_ = dsdl::NodeHealth::Ok;
-
             const int result = bootloader_.upgradeApp(*this);
-
-            vendor_specific_status_ = std::abs(result);
-            sendLog((result >= 0) ? LogLevel::Info : LogLevel::Error,
-                    os::heapless::concatenate("FW update status ", result));
 
             if (result >= 0)
             {
-                node_health_ = dsdl::NodeHealth::Ok;
+                vendor_specific_status_ = 0;
+                if (bootloader_.getState() == State::NoAppToBoot)
+                {
+                    sendLog(LogLevel::Error, "Downloaded image is invalid");
+                }
+                else
+                {
+                    sendLog(LogLevel::Info, "Success");
+                }
             }
             else
             {
-                node_health_ = dsdl::NodeHealth::Error;
+                vendor_specific_status_ = std::abs(result);
+                sendLog(LogLevel::Error, os::heapless::concatenate("Upgrade error ", result));
             }
 
             /*
              * Reset everything to zero and loop again, because there's nothing else to do.
              * The outer logic will request reboot if necessary.
              */
-            node_mode_ = dsdl::NodeMode::Maintenance;
             remote_server_node_id_ = 0;
             firmware_file_path_.clear();
         }
