@@ -278,6 +278,13 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     using chibios_rt::BaseStaticThread<StackSize>::start;       // This is overloaded below
 
 
+    void delayAfterDriverError()
+    {
+        (void) timekeeper_.getMicroseconds();   // This is needed to avoid overflow in the timekeeper
+        ::sleep(1);
+        (void) timekeeper_.getMicroseconds();
+    }
+
     std::uint64_t getMonotonicTimestampUSec() const
     {
         return timekeeper_.getMicroseconds();
@@ -488,12 +495,12 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 }
                 if (res < 0)
                 {
-                    ::sleep(1);
+                    delayAfterDriverError();
                 }
             }
             else
             {
-                ::sleep(1);
+                delayAfterDriverError();
             }
         }
     }
@@ -515,7 +522,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 break;
             }
 
-            ::sleep(1);
+            delayAfterDriverError();
         }
 
         using namespace impl_;
@@ -632,7 +639,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 break;
             }
 
-            ::sleep(1);
+            delayAfterDriverError();
         }
 
         init_done_ = true;
