@@ -306,7 +306,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         /*
          * Bootloader State        Node Mode       Node Health
          * ----------------------------------------------------
-         * NoAppToBoot             Maintenance     Error
+         * NoAppToBoot             SoftwareUpdate  Error
          * BootDelay               Maintenance     Ok
          * BootCancelled           Maintenance     Warning
          * AppUpgradeInProgress    SoftwareUpdate  Ok
@@ -319,6 +319,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         {
         case State::NoAppToBoot:
         {
+            node_mode   = std::uint8_t(impl_::dsdl::NodeMode::SoftwareUpdate);
             node_health = std::uint8_t(impl_::dsdl::NodeHealth::Error);
             break;
         }
