@@ -586,7 +586,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
          */
         if (can_bus_bit_rate_ == 0)
         {
-            logger_.puts("CAN bit rate detection...");
             performCANBitRateDetection();
         }
 
@@ -602,7 +601,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
          */
         if (canardGetLocalNodeID(&canard_) == 0)
         {
-            logger_.puts("Node ID allocation...");
             performDynamicNodeIDAllocation();
         }
 
@@ -645,7 +643,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
              */
             if (remote_server_node_id_ == 0)
             {
-                logger_.puts("Waiting for FW update request...");
                 while ((!os::isRebootRequested()) && (remote_server_node_id_ == 0))
                 {
                     poll();
@@ -727,6 +724,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                                                        firmware_file_path_.size() + 5);
                 if (res < 0)
                 {
+                    logger_.println("File req err %d", res);
                     return res;
                 }
             }
@@ -814,7 +812,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             if (transfer->source_node_id == CANARD_BROADCAST_NODE_ID)
             {
                 node_id_allocation_unique_id_offset_ = 0;
-                logger_.puts("Foreign allocation response");
                 return;
             }
 
@@ -834,7 +831,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             // Matching the received UID against the local one
             if (std::memcmp(received_unique_id, hw_info_.unique_id.data(), received_unique_id_len) != 0)
             {
-                logger_.puts("Mismatching allocation response");
                 node_id_allocation_unique_id_offset_ = 0;
                 return;         // No match, return
             }
@@ -845,9 +841,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 node_id_allocation_unique_id_offset_ = received_unique_id_len;
                 send_next_node_id_allocation_request_at_ =
                     getMonotonicTimestampUSec() + getRandomDurationMicrosecond(0, 400000);
-
-                logger_.println("Matching allocation response from %d offset %d",
-                       transfer->source_node_id, node_id_allocation_unique_id_offset_);
             }
             else
             {
@@ -857,8 +850,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 assert(allocated_node_id <= 127);
 
                 canardSetLocalNodeID(&canard_, allocated_node_id);
-
-                logger_.println("Node ID %d allocated by %d", allocated_node_id, transfer->source_node_id);
             }
         }
 
@@ -992,15 +983,19 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             }
 
             canardReleaseRxTransferPayload(&canard_, transfer);
-            (void) canardRequestOrRespond(&canard_,
-                                          transfer->source_node_id,
-                                          dsdl::BeginFirmwareUpdate::DataTypeSignature,
-                                          dsdl::BeginFirmwareUpdate::DataTypeID,
-                                          &transfer->transfer_id,
-                                          transfer->priority,
-                                          CanardResponse,
-                                          &error,
-                                          1);
+            const int resp_res = canardRequestOrRespond(&canard_,
+                                                        transfer->source_node_id,
+                                                        dsdl::BeginFirmwareUpdate::DataTypeSignature,
+                                                        dsdl::BeginFirmwareUpdate::DataTypeID,
+                                                        &transfer->transfer_id,
+                                                        transfer->priority,
+                                                        CanardResponse,
+                                                        &error,
+                                                        1);
+            if (resp_res <= 0)
+            {
+                logger_.println("BeginFWUpdate resp err %d", resp_res);
+            }
         }
 
         /*
