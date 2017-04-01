@@ -7,6 +7,7 @@
 #pragma once
 
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/helpers.hpp>
 #include <cstdint>
 #include <utility>
 #include <array>
@@ -136,6 +137,9 @@ class Bootloader
 
     chibios_rt::Mutex mutex_;
 
+    /// Caching is needed because app check can sometimes take a very long time (several seconds)
+    os::helpers::LazyConstructor<AppInfo> cached_app_info_;
+
     /**
      * Refer to the Brickproof Bootloader specs.
      */
@@ -161,7 +165,7 @@ class Bootloader
 
     std::pair<AppDescriptor, bool> locateAppDescriptor();
 
-    void verifyAppAndUpdateState();
+    void verifyAppAndUpdateState(const State state_on_success);
 
 public:
     /**
@@ -185,7 +189,6 @@ public:
 
     /**
      * Returns info about the application, if any.
-     * TODO: Cache the app info data, or make reading is faster
      * @return First component is the application, second component is the status:
      *         true means that the info is valid, false means that there is no application to work with.
      */
