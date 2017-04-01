@@ -83,7 +83,7 @@ endif
 NO_BUILTIN += -fno-builtin-printf -fno-builtin-fprintf  -fno-builtin-vprintf -fno-builtin-vfprintf -fno-builtin-puts
 
 USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions -fno-unwind-tables -fno-stack-protector \
-           $(NO_BUILTIN) -fconserve-stack
+           $(NO_BUILTIN)
 
 # Explicit usage flags are needed for LTO:
 USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit -u__errno
