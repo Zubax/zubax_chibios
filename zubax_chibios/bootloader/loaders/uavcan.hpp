@@ -248,6 +248,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
     impl_::MonotonicTimekeeper timekeeper_;
     std::uint64_t next_1hz_task_invocation_ = 0;
+    bool init_done_ = false;
 
     alignas(std::max_align_t) std::array<std::uint8_t, MemoryPoolSize> memory_pool_{};
     CanardInstance canard_{};
@@ -398,7 +399,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         canardCleanupStaleTransfers(&canard_, getMonotonicTimestampUSec());
 
         // NodeStatus broadcasting
-        if (canardGetLocalNodeID(&canard_) > 0)
+        if (init_done_ && (canardGetLocalNodeID(&canard_) > 0))
         {
             std::uint8_t buffer[dsdl::NodeStatus::MaxSizeBytes]{};
             makeNodeStatusMessage(buffer);
@@ -615,7 +616,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         using namespace impl_;
 
         /*
-         * Update loop; run forever because there's nothing else to do
+         * Init CAN in proper mode now
          */
         while (true)
         {
@@ -634,6 +635,11 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             ::sleep(1);
         }
 
+        init_done_ = true;
+
+        /*
+         * Update loop; run forever because there's nothing else to do
+         */
         while (!os::isRebootRequested())
         {
             assert((confirmed_local_node_id_ > 0) && (canardGetLocalNodeID(&canard_) > 0));
