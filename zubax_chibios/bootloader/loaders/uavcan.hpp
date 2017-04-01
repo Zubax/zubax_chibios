@@ -794,9 +794,11 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
             /*
              * Wait in order to avoid bus congestion
-             * The magic shift ensures that the bus utilization does not depend on the bit rate.
+             * The magic shift ensures that the relative bus utilization does not depend on the bit rate.
              */
-            const std::uint64_t wait_deadline = getMonotonicTimestampUSec() + 1000000UL / (can_bus_bit_rate_ >> 15);
+            const std::uint64_t wait_deadline =
+                getMonotonicTimestampUSec() + 1000000UL / (1UL + (can_bus_bit_rate_ >> 16));
+
             while (getMonotonicTimestampUSec() < wait_deadline)
             {
                 poll();
