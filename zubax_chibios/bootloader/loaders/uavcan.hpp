@@ -153,13 +153,14 @@ struct ServiceTypeInfo
 };
 
 // The values have been obtained with the help of the script show_data_type_info.py from libcanard.
-using NodeStatus                = MessageTypeInfo<341,  0x0f0868d0c1a7c6f1,    56>;
-using NodeIDAllocation          = MessageTypeInfo<1,    0x0b2a812620a11d40,   141>;
+using NodeStatus                = MessageTypeInfo<341,   0x0f0868d0c1a7c6f1,    56>;
+using NodeIDAllocation          = MessageTypeInfo<1,     0x0b2a812620a11d40,   141>;
+using LogMessage                = MessageTypeInfo<16383, 0xd654a48e0c049d75,   983>;
 
-using GetNodeInfo               = ServiceTypeInfo<1,    0xee468a8121c46a9e,     0,  3015>;
-using BeginFirmwareUpdate       = ServiceTypeInfo<40,   0xb7d725df72724126,  1616,  1031>;
-using FileRead                  = ServiceTypeInfo<48,   0x8dcdca939f33f678,  1648,  2073>;
-using RestartNode               = ServiceTypeInfo<5,    0x569e05394a3017f0,    40,     1>;
+using GetNodeInfo               = ServiceTypeInfo<1,     0xee468a8121c46a9e,     0,  3015>;
+using BeginFirmwareUpdate       = ServiceTypeInfo<40,    0xb7d725df72724126,  1616,  1031>;
+using FileRead                  = ServiceTypeInfo<48,    0x8dcdca939f33f678,  1648,  2073>;
+using RestartNode               = ServiceTypeInfo<5,     0x569e05394a3017f0,    40,     1>;
 
 
 enum class NodeHealth : std::uint8_t
@@ -213,6 +214,17 @@ public:
     }
 };
 
+/**
+ * See uavcan.protocol.debug.LogMessage
+ */
+enum class LogLevel : std::uint8_t
+{
+    Debug,
+    Info,
+    Warning,
+    Error
+};
+
 }       // namespace impl_
 
 /**
@@ -250,9 +262,11 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
     impl_::dsdl::NodeHealth node_health_ = impl_::dsdl::NodeHealth::Ok;
     impl_::dsdl::NodeMode node_mode_     = impl_::dsdl::NodeMode::Maintenance;
+    std::uint16_t vendor_specific_status_ = 0;
 
     std::uint8_t node_status_transfer_id_ = 0;
     std::uint8_t node_id_allocation_transfer_id_ = 0;
+    std::uint8_t log_message_transfer_id_ = 0;
 
 
     using chibios_rt::BaseStaticThread<StackSize>::start;       // This is overloaded below
@@ -277,6 +291,29 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         canardEncodeScalar(buffer,  0, 32, &uptime_sec);
         canardEncodeScalar(buffer, 32,  2, &node_health_);
         canardEncodeScalar(buffer, 34,  3, &node_mode_);
+        canardEncodeScalar(buffer, 40, 16, &vendor_specific_status_);
+    }
+
+    void sendLog(const impl_::LogLevel level, const os::heapless::String<90>& txt)
+    {
+        static const os::heapless::String<31> SourceName("Bootloader");
+        std::uint8_t buffer[1 + 31 + 90]{};
+        buffer[0] = (std::uint8_t(level) << 5) | SourceName.length();
+        std::copy(SourceName.begin(), SourceName.end(), &buffer[1]);
+        std::copy(txt.begin(), txt.end(), &buffer[1 + SourceName.length()]);
+
+        using impl_::dsdl::LogMessage;
+        const int res = canardBroadcast(&canard_,
+                                        LogMessage::DataTypeSignature,
+                                        LogMessage::DataTypeID,
+                                        &log_message_transfer_id_,
+                                        CANARD_TRANSFER_PRIORITY_LOWEST,
+                                        buffer,
+                                        1 + SourceName.length() + txt.length());
+        if (res < 0)
+        {
+            logger_.println("Log err %d", res);
+        }
     }
 
     int initCAN(const std::uint32_t bitrate,
@@ -588,7 +625,9 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
             const int result = bootloader_.upgradeApp(*this);
 
-            logger_.println("FW downloaded, result %d", int(result));
+            vendor_specific_status_ = std::abs(result);
+            sendLog((result >= 0) ? LogLevel::Info : LogLevel::Error,
+                    os::heapless::concatenate("FW update status ", result));
 
             if (result >= 0)
             {
