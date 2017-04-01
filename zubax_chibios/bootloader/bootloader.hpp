@@ -126,7 +126,7 @@ public:
  */
 class Bootloader
 {
-    static constexpr unsigned DefaultBootDelayMSec = 3000;
+    static constexpr unsigned DefaultBootDelayMSec = 5000;
 
     State state_;
     IAppStorageBackend& backend_;
