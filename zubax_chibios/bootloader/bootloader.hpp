@@ -185,6 +185,7 @@ public:
 
     /**
      * Returns info about the application, if any.
+     * TODO: Cache the app info data, or make reading is faster
      * @return First component is the application, second component is the status:
      *         true means that the info is valid, false means that there is no application to work with.
      */

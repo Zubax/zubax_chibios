@@ -33,8 +33,6 @@ static constexpr std::int16_t ErrProtocolError                  = 30003;
 static constexpr std::int16_t ErrTransferCancelledByRemote      = 30004;
 static constexpr std::int16_t ErrRemoteRefusedToProvideFile     = 30005;
 
-typedef std::array<std::uint8_t, 16> NodeUniqueID;
-
 /**
  * Generic CAN controller driver interface.
  */
@@ -97,6 +95,22 @@ public:
     virtual std::pair<int, CanardCANFrame> receive(const int timeout_millisec);
 };
 
+
+using NodeName = os::heapless::String<80>;
+
+struct HardwareInfo
+{
+    std::uint8_t major = 0;                                     ///< Required field
+    std::uint8_t minor = 0;                                     ///< Required field
+
+    typedef std::array<std::uint8_t, 16> UniqueID;
+    UniqueID unique_id{};                                       ///< Required field
+
+    typedef std::array<std::uint8_t, 255> CertificateOfAuthenticity;
+    CertificateOfAuthenticity certificate_of_authenticity;      ///< Optional, set length to zero if not defined
+    std::uint8_t certificate_of_authenticity_length = 0;
+};
+
 /**
  * Implementation details, please do not touch this.
  */
@@ -145,6 +159,7 @@ using NodeIDAllocation          = MessageTypeInfo<1,    0x0b2a812620a11d40,   14
 using GetNodeInfo               = ServiceTypeInfo<1,    0xee468a8121c46a9e,     0,  3015>;
 using BeginFirmwareUpdate       = ServiceTypeInfo<40,   0xb7d725df72724126,  1616,  1031>;
 using FileRead                  = ServiceTypeInfo<48,   0x8dcdca939f33f678,  1648,  2073>;
+using RestartNode               = ServiceTypeInfo<5,    0x569e05394a3017f0,    40,     1>;
 
 
 enum class NodeHealth : std::uint8_t
@@ -213,7 +228,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     ::os::bootloader::Bootloader& bootloader_;
     ICANIface& iface_;
 
-    const NodeUniqueID local_unique_id_;
+    const NodeName node_name_;
+    const HardwareInfo hw_info_;
 
     impl_::MonotonicTimekeeper timekeeper_;
     std::uint64_t next_1hz_task_invocation_ = 0;
@@ -254,7 +270,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         return lower_bound_usec + rnd % (upper_bound_usec - lower_bound_usec);
     }
 
-    void makeNodeStatusMessage(std::uint8_t (&buffer)[impl_::dsdl::NodeStatus::MaxSizeBytes]) const
+    void makeNodeStatusMessage(std::uint8_t* buffer) const
     {
         std::memset(buffer, 0, impl_::dsdl::NodeStatus::MaxSizeBytes);
         const std::uint32_t uptime_sec = (timekeeper_.getUptimeMicroseconds() + 500000UL) / 1000000UL;
@@ -449,19 +465,19 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             }
 
             static constexpr std::uint8_t MaxLenOfUniqueIDInRequest = 6;
-            std::uint8_t uid_size = std::uint8_t(local_unique_id_.size() - node_id_allocation_unique_id_offset_);
+            std::uint8_t uid_size = std::uint8_t(hw_info_.unique_id.size() - node_id_allocation_unique_id_offset_);
             if (uid_size > MaxLenOfUniqueIDInRequest)
             {
                 uid_size = MaxLenOfUniqueIDInRequest;
             }
 
             // Paranoia time
-            assert(node_id_allocation_unique_id_offset_ < local_unique_id_.size());
+            assert(node_id_allocation_unique_id_offset_ < hw_info_.unique_id.size());
             assert(uid_size <= MaxLenOfUniqueIDInRequest);
             assert(uid_size > 0);
-            assert((uid_size + node_id_allocation_unique_id_offset_) <= local_unique_id_.size());
+            assert((uid_size + node_id_allocation_unique_id_offset_) <= hw_info_.unique_id.size());
 
-            std::memmove(&allocation_request[1], &local_unique_id_[node_id_allocation_unique_id_offset_], uid_size);
+            std::memmove(&allocation_request[1], &hw_info_.unique_id[node_id_allocation_unique_id_offset_], uid_size);
 
             // Broadcasting the request
             const int bcast_res = canardBroadcast(&canard_,
@@ -523,6 +539,23 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         /*
          * Update loop; run forever because there's nothing else to do
          */
+        while (true)
+        {
+            // Accept only correctly addressed service requests and responses
+            // We don't need message transfers anymore
+            ICANIface::AcceptanceFilterConfig filt;
+            filt.id   = 0b00000000000000000000010000000 | (confirmed_local_node_id_ << 8) | CANARD_CAN_FRAME_EFF;
+            filt.mask = 0b00000000000000111111110000000 |
+                CANARD_CAN_FRAME_EFF | CANARD_CAN_FRAME_RTR | CANARD_CAN_FRAME_ERR;
+
+            if (initCAN(can_bus_bit_rate_, ICANIface::Mode::Normal, filt) >= 0)
+            {
+                break;
+            }
+
+            ::sleep(1);
+        }
+
         while (!os::isRebootRequested())
         {
             assert((confirmed_local_node_id_ > 0) && (canardGetLocalNodeID(&canard_) > 0));
@@ -586,6 +619,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     {
         using namespace impl_;
 
+        DEBUG_LOG("RX TRANSFER %x %u\n", transfer->data_type_id, transfer->transfer_type);
+
         /*
          * Dynamic node ID allocation protocol.
          * Taking this branch only if we don't have a node ID, ignoring otherwise.
@@ -608,26 +643,26 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
             // Copying the unique ID from the message
             static constexpr unsigned UniqueIDBitOffset = 8;
-            std::uint8_t received_unique_id[local_unique_id_.size()];
+            std::uint8_t received_unique_id[hw_info_.unique_id.size()];
             std::uint8_t received_unique_id_len = 0;
             for (;
                  received_unique_id_len < (transfer->payload_len - (UniqueIDBitOffset / 8U));
                  received_unique_id_len++)
             {
-                assert(received_unique_id_len < local_unique_id_.size());
+                assert(received_unique_id_len < hw_info_.unique_id.size());
                 const std::uint8_t bit_offset = std::uint8_t(UniqueIDBitOffset + received_unique_id_len * 8U);
                 (void) canardDecodeScalar(transfer, bit_offset, 8, false, &received_unique_id[received_unique_id_len]);
             }
 
             // Matching the received UID against the local one
-            if (std::memcmp(received_unique_id, local_unique_id_.data(), received_unique_id_len) != 0)
+            if (std::memcmp(received_unique_id, hw_info_.unique_id.data(), received_unique_id_len) != 0)
             {
                 logger_.puts("Mismatching allocation response");
                 node_id_allocation_unique_id_offset_ = 0;
                 return;         // No match, return
             }
 
-            if (received_unique_id_len < local_unique_id_.size())
+            if (received_unique_id_len < hw_info_.unique_id.size())
             {
                 // The allocator has confirmed part of unique ID, switching to the next stage and updating the timeout.
                 node_id_allocation_unique_id_offset_ = received_unique_id_len;
@@ -647,6 +682,87 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 canardSetLocalNodeID(&canard_, allocated_node_id);
 
                 logger_.println("Node ID %d allocated by %d", allocated_node_id, transfer->source_node_id);
+            }
+        }
+
+        /*
+         * GetNodeInfo request.
+         * Someday this mess should be replaced with auto-generated message serialization code, like in libuavcan.
+         */
+        if ((transfer->transfer_type == CanardTransferTypeRequest) &&
+            (transfer->data_type_id == dsdl::GetNodeInfo::DataTypeID))
+        {
+            std::uint8_t buffer[dsdl::GetNodeInfo::MaxSizeBytesResponse]{};
+
+            // NodeStatus
+            makeNodeStatusMessage(buffer);
+
+            // SoftwareVersion (query the bootloader)
+            const auto sw_success = bootloader_.getAppInfo();
+            if (sw_success.second)
+            {
+                const AppInfo sw = sw_success.first;
+                buffer[7] = sw.major_version;
+                buffer[8] = sw.minor_version;
+                buffer[9] = 3;                                              // Optional field flags
+                canardEncodeScalar(buffer,  80, 32, &sw.vcs_commit);
+                canardEncodeScalar(buffer, 112, 64, &sw.image_crc);
+            }
+
+            // HardwareVersion
+            buffer[22] = hw_info_.major;
+            buffer[23] = hw_info_.minor;
+            std::memmove(&buffer[24], hw_info_.unique_id.data(), hw_info_.unique_id.size());
+            buffer[40] = hw_info_.certificate_of_authenticity_length;
+            std::memmove(&buffer[41],
+                         hw_info_.certificate_of_authenticity.data(),
+                         hw_info_.certificate_of_authenticity_length);
+
+            // Name
+            std::memcpy(&buffer[41 + hw_info_.certificate_of_authenticity_length],
+                        node_name_.c_str(),
+                        node_name_.length());
+
+            const std::size_t total_size = 41 + hw_info_.certificate_of_authenticity_length + node_name_.length();
+            assert(total_size <= dsdl::GetNodeInfo::MaxSizeBytesResponse);
+
+            const int resp_res = canardRequestOrRespond(&canard_,
+                                                        transfer->source_node_id,
+                                                        dsdl::GetNodeInfo::DataTypeSignature,
+                                                        dsdl::GetNodeInfo::DataTypeID,
+                                                        &transfer->transfer_id,
+                                                        transfer->priority,
+                                                        CanardResponse,
+                                                        &buffer[0],
+                                                        std::uint16_t(total_size));
+            if (resp_res <= 0)
+            {
+                logger_.println("GetNodeInfo resp err %d", resp_res);
+            }
+        }
+
+        /*
+         * RestartNode request.
+         */
+        if ((transfer->transfer_type == CanardTransferTypeRequest) &&
+            (transfer->data_type_id == dsdl::RestartNode::DataTypeID))
+        {
+            std::uint64_t magic_number = 0;
+            (void) canardDecodeScalar(transfer, 0, 40, false, &magic_number);
+            if (magic_number == 0xACCE551B1E)
+            {
+                std::uint8_t response = 1 << 7;                 // 1 - ok, 0 - rejected
+                (void) canardRequestOrRespond(&canard_,
+                                              transfer->source_node_id,
+                                              dsdl::RestartNode::DataTypeSignature,
+                                              dsdl::RestartNode::DataTypeID,
+                                              &transfer->transfer_id,
+                                              transfer->priority,
+                                              CanardResponse,
+                                              &response,
+                                              1);
+                // TODO: Delegate the decision to the application via callback
+                os::requestReboot();
             }
         }
     }
@@ -695,6 +811,14 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 *out_data_type_signature = FileRead::DataTypeSignature;
                 return true;
             }
+
+            // RestartNode REQUEST
+            if ((transfer_type == CanardTransferTypeRequest) &&
+                (data_type_id == RestartNode::DataTypeID))
+            {
+                *out_data_type_signature = RestartNode::DataTypeSignature;
+                return true;
+            }
         }
 
         return false;
@@ -727,14 +851,17 @@ public:
     /**
      * @param bl                        mutable reference to the bootloader instance
      * @param iface                     CAN driver adaptor instance
-     * @param node_unique_id            unique ID of this node
+     * @param name                      product ID, UAVCAN node name
+     * @param hw
      */
     UAVCANFirmwareUpdateNode(::os::bootloader::Bootloader& bl,
                              ICANIface& iface,
-                             const NodeUniqueID& node_unique_id) :
+                             const NodeName& name,
+                             const HardwareInfo& hw) :
         bootloader_(bl),
         iface_(iface),
-        local_unique_id_(node_unique_id)
+        node_name_(name),
+        hw_info_(hw)
     {
         next_1hz_task_invocation_ = getMonotonicTimestampUSec();
     }
