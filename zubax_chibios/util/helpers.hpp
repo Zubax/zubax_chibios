@@ -106,16 +106,16 @@ public:
         return ptr_;
     }
 
-    T* operator*()
+    T& operator*()
     {
         assertConstructed();
-        return ptr_;
+        return *ptr_;
     }
 
-    const T* operator*() const
+    const T& operator*() const
     {
         assertConstructed();
-        return ptr_;
+        return *ptr_;
     }
 };
 
