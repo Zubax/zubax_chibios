@@ -6,7 +6,6 @@
 
 ZUBAX_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-# TODO: make configs optional too
 CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/libstdcpp.cpp                  \
           $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys_console.cpp                \
           $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.cpp
