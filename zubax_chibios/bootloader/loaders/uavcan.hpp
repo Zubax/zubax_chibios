@@ -778,9 +778,18 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         if ((transfer->transfer_type == CanardTransferTypeRequest) &&
             (transfer->data_type_id == dsdl::BeginFirmwareUpdate::DataTypeID))
         {
+            const auto bl_state = bootloader_.getState();
             std::uint8_t error = 0;
 
-            if (remote_server_node_id_ == 0)
+            if ((bl_state == State::AppUpgradeInProgress) || (remote_server_node_id_ != 0))
+            {
+                error = 2;      // Already in progress
+            }
+            else if ((bl_state == State::ReadyToBoot))
+            {
+                error = 1;      // Invalid mode
+            }
+            else
             {
                 // Determine the node ID of the firmware server
                 (void) canardDecodeScalar(transfer, 0, 8, false, &remote_server_node_id_);
@@ -803,10 +812,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 }
 
                 error = 0;
-            }
-            else
-            {
-                error = 2;      // Already in progress
             }
 
             canardReleaseRxTransferPayload(&canard_, transfer);
