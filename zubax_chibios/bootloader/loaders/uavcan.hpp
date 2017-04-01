@@ -27,11 +27,8 @@ namespace uavcan_loader
 /**
  * Error codes specific to this module.
  */
-static constexpr std::int16_t ErrOK                             = 0;
-static constexpr std::int16_t ErrDriverError                    = 30002;
-static constexpr std::int16_t ErrProtocolError                  = 30003;
-static constexpr std::int16_t ErrTransferCancelledByRemote      = 30004;
-static constexpr std::int16_t ErrRemoteRefusedToProvideFile     = 30005;
+static constexpr std::int16_t ErrTimeout        = 30001;
+static constexpr std::int16_t ErrInterrupted    = 30002;
 
 /**
  * Generic CAN controller driver interface.
@@ -116,6 +113,11 @@ struct HardwareInfo
  */
 namespace impl_
 {
+
+static constexpr unsigned ServiceRequestTimeoutMillisecond = 1000;
+
+static constexpr unsigned ProgressReportIntervalMillisecond = 10000;
+
 namespace dsdl
 {
 
@@ -267,6 +269,10 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     std::uint8_t node_status_transfer_id_ = 0;
     std::uint8_t node_id_allocation_transfer_id_ = 0;
     std::uint8_t log_message_transfer_id_ = 0;
+    std::uint8_t file_read_transfer_id_ = 0;
+
+    std::array<std::uint8_t, 256> read_buffer_{};
+    int read_result_ = 0;
 
 
     using chibios_rt::BaseStaticThread<StackSize>::start;       // This is overloaded below
@@ -650,15 +656,109 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
     int download(IDownloadStreamSink& sink) override
     {
-        (void) sink;
+        using namespace impl_;
+
+        std::uint64_t offset = 0;
+        std::uint64_t next_progress_report_deadline = getMonotonicTimestampUSec();
+
+        while (true)
+        {
+            if (os::isRebootRequested())
+            {
+                return -ErrInterrupted;
+            }
+
+            /*
+             * Send request
+             */
+            const std::uint64_t response_deadline =
+                getMonotonicTimestampUSec() + ServiceRequestTimeoutMillisecond * 1000;
+            {
+                std::uint8_t buffer[dsdl::FileRead::MaxSizeBytesRequest]{};
+                canardEncodeScalar(buffer, 0, 40, &offset);
+                std::copy(firmware_file_path_.begin(), firmware_file_path_.end(), &buffer[5]);
+
+                const int res = canardRequestOrRespond(&canard_,
+                                                       remote_server_node_id_,
+                                                       dsdl::FileRead::DataTypeSignature,
+                                                       dsdl::FileRead::DataTypeID,
+                                                       &file_read_transfer_id_,
+                                                       CANARD_TRANSFER_PRIORITY_LOW,
+                                                       CanardRequest,
+                                                       buffer,
+                                                       firmware_file_path_.size() + 5);
+                if (res < 0)
+                {
+                    return res;
+                }
+            }
+
+            /*
+             * Await response
+             */
+            read_result_ = std::numeric_limits<int>::max();
+            while (read_result_ == std::numeric_limits<int>::max())
+            {
+                poll();
+
+                if (getMonotonicTimestampUSec() > response_deadline)
+                {
+                    return -ErrTimeout;
+                }
+            }
+
+            if (read_result_ < 0)
+            {
+                return read_result_;
+            }
+
+            /*
+             * Process the response.
+             * Observe that we don't constrain the maximum image size - either the bootloader
+             * or the storage backend will return error if we exceed it.
+             */
+            if (read_result_ > 0)
+            {
+                offset += read_result_;
+
+                const int res = sink.handleNextDataChunk(read_buffer_.data(), read_result_);
+                if (res < 0)
+                {
+                    return res;
+                }
+            }
+            else
+            {
+                return 0;       // Done
+            }
+
+            /*
+             * Send a progress report if time is up
+             */
+            if (getMonotonicTimestampUSec() > next_progress_report_deadline)
+            {
+                next_progress_report_deadline += ProgressReportIntervalMillisecond * 1000;
+                sendLog(LogLevel::Info, os::heapless::concatenate(offset, "B down..."));
+            }
+
+            /*
+             * Wait in order to avoid bus congestion
+             * The magic shift ensures that the bus utilization does not depend on the bit rate.
+             */
+            const std::uint64_t wait_deadline = getMonotonicTimestampUSec() + 1000000UL / (can_bus_bit_rate_ >> 15);
+            while (getMonotonicTimestampUSec() < wait_deadline)
+            {
+                poll();
+            }
+        }
+
+        assert(false);  // Should never get here
         return -1;
     }
 
     void onTransferReception(CanardRxTransfer* const transfer)
     {
         using namespace impl_;
-
-        DEBUG_LOG("RX TRANSFER %x %u\n", transfer->data_type_id, transfer->transfer_type);
 
         /*
          * Dynamic node ID allocation protocol.
@@ -863,6 +963,29 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                                           CanardResponse,
                                           &error,
                                           1);
+        }
+
+        /*
+         * File read response.
+         */
+        if ((transfer->transfer_type == CanardTransferTypeResponse) &&
+            (transfer->data_type_id == dsdl::FileRead::DataTypeID) &&
+            (((transfer->transfer_id + 1) & 31) == file_read_transfer_id_))
+        {
+            std::uint16_t error = 0;
+            (void) canardDecodeScalar(transfer, 0, 16, false, &error);
+            if (error != 0)
+            {
+                read_result_ = -error;
+            }
+            else
+            {
+                read_result_ = std::min(256, transfer->payload_len - 2);
+                for (int i = 0; i < read_result_; i++)
+                {
+                    (void) canardDecodeScalar(transfer, 16 + i * 8, 8, false, &read_buffer_[i]);
+                }
+            }
         }
     }
 
