@@ -239,6 +239,11 @@ int Bootloader::upgradeApp(IDownloader& downloader)
             if ((offset_ + size) <= max_image_size_)
             {
                 int res = backend_.write(offset_, data, size);
+                if ((res >= 0) && (res != int(size)))
+                {
+                    return -ErrAppStorageWriteFailure;
+                }
+
                 offset_ += size;
                 return res;
             }
