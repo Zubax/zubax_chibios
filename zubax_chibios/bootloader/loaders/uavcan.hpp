@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <canard.h>                     // This loader requires libcanard
 #include <unistd.h>
+#include <hal.h>
 
 
 namespace os
