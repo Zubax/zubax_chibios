@@ -212,7 +212,6 @@ public:
         }
 #endif
 
-        DEBUG_LOG("Erased %u B @ 0x%08x\n", unsigned(how_much), reinterpret_cast<unsigned>(where));
         return std::all_of(reinterpret_cast<const std::uint8_t*>(where),
                            reinterpret_cast<const std::uint8_t*>(where) + how_much,
                            [](std::uint8_t x) { return x == 0xFF; });
