@@ -96,25 +96,25 @@ std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
 
         // Checking firmware CRC
         {
-            constexpr auto WordSize = 4;
-            const auto crc_offset_in_words = (offset + offsetof(AppDescriptor, app_info.image_crc)) / WordSize;
-            const auto image_size_in_words = desc.app_info.image_size / WordSize;
+            constexpr auto DWordSize = 8;
+            const auto crc_offset_in_dwords = (offset + offsetof(AppDescriptor, app_info.image_crc)) / DWordSize;
+            const auto image_size_in_dwords = desc.app_info.image_size / DWordSize;
 
             CRC64WE crc;
 
-            for (unsigned i = 0; i < image_size_in_words; i++)
+            for (unsigned i = 0; i < image_size_in_dwords; i++)
             {
-                std::uint32_t word = 0;
-                if ((i != crc_offset_in_words) && (i != (crc_offset_in_words + 1)))
+                std::uint64_t dword = 0;
+                if (i != crc_offset_in_dwords)
                 {
-                    int res = backend_.read(i * WordSize, &word, WordSize);
-                    if (res != WordSize)
+                    int res = backend_.read(i * DWordSize, &dword, DWordSize);
+                    if (res != DWordSize)
                     {
                         continue;
                     }
                 }
 
-                crc.add(&word, WordSize);
+                crc.add(&dword, DWordSize);
             }
 
             if (crc.get() != desc.app_info.image_crc)
