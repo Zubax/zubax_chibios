@@ -8,6 +8,7 @@
 
 #include "../bootloader.hpp"
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <cstdint>
 #include <array>
 #include <utility>
@@ -58,12 +59,16 @@ class YModemReceiver : public IDownloader
     static constexpr unsigned MaxRetries = 3;
 
     ::BaseChannel* const channel_;
+    watchdog::Timer* const watchdog_reference_;
 
     std::uint8_t buffer_[WorstCaseBlockSizeWithCRC];
+
 
     static int sendResultToErrorCode(int res);
 
     static std::uint8_t computeChecksum(const void* data, unsigned size);
+
+    void kickTheDog();
 
     int send(std::uint8_t byte);
 
@@ -99,8 +104,15 @@ class YModemReceiver : public IDownloader
     static int processDownloadedBlock(IDownloadStreamSink& sink, void* data, unsigned size);
 
 public:
-    YModemReceiver(::BaseChannel* channel) :
-        channel_(channel)
+    /**
+     * @param channel                   the serial port channel that will be used for downloading
+     * @param watchdog_reference        optional reference to a watchdog timer that will be reset periodically.
+     *                                  The watchdog timeout must be greater than 1 second.
+     */
+    YModemReceiver(::BaseChannel* channel,
+                   watchdog::Timer* watchdog_reference = nullptr) :
+        channel_(channel),
+        watchdog_reference_(watchdog_reference)
     { }
 
     int download(IDownloadStreamSink& sink) override;
