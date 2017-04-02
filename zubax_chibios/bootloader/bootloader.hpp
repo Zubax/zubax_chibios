@@ -63,6 +63,10 @@ struct __attribute__((packed)) AppInfo
  *  1. beginUpgrade()
  *  2. write() repeated until finished.
  *  3. endUpgrade(success or not)
+ *
+ * Please note that the performance of the ROM reading routine is critical.
+ * Slow access may lead to watchdog timeouts (assuming that the watchdog is used),
+ * disruption of communications, and premature expiration of the boot timeout.
  */
 class IAppStorageBackend
 {
