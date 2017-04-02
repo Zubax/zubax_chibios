@@ -9,6 +9,7 @@
 #include "../bootloader.hpp"
 #include <zubax_chibios/os.hpp>
 #include <zubax_chibios/util/heapless.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <cstdint>
 #include <cstdlib>
 #include <array>
@@ -114,6 +115,12 @@ struct HardwareInfo
  */
 namespace impl_
 {
+/**
+ * This timeout should accommodate all operations with the application image storage
+ * (which is typically based on flash memory, which is slow).
+ * Image verification can take several seconds, especially if the image is invalid.
+ */
+static constexpr unsigned WatchdogTimeoutMillisecond = 5000;
 
 static constexpr unsigned ServiceRequestTimeoutMillisecond = 1000;
 
@@ -247,6 +254,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     const NodeName node_name_;
     const HardwareInfo hw_info_;
 
+    watchdog::Timer watchdog_;
     impl_::MonotonicTimekeeper timekeeper_;
     std::uint64_t next_1hz_task_invocation_ = 0;
     bool init_done_ = false;
@@ -281,8 +289,10 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
     void delayAfterDriverError()
     {
+        watchdog_.reset();
         (void) timekeeper_.getMicroseconds();   // This is needed to avoid overflow in the timekeeper
         ::sleep(1);
+        watchdog_.reset();
         (void) timekeeper_.getMicroseconds();
     }
 
@@ -485,6 +495,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         // Loop forever until the bit rate is detected
         while ((!os::isRebootRequested()) && (can_bus_bit_rate_ == 0))
         {
+            watchdog_.reset();
+
             const std::uint32_t br = StandardBitRates[current_bit_rate_index];
             current_bit_rate_index = (current_bit_rate_index + 1) % StandardBitRates.size();
 
@@ -505,6 +517,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 delayAfterDriverError();
             }
         }
+
+        watchdog_.reset();
     }
 
     void performDynamicNodeIDAllocation()
@@ -531,6 +545,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
         while ((!os::isRebootRequested()) && (canardGetLocalNodeID(&canard_) == 0))
         {
+            watchdog_.reset();
+
             send_next_node_id_allocation_request_at_ =
                 getMonotonicTimestampUSec() + getRandomDurationMicrosecond(600000, 1000000);
 
@@ -585,6 +601,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             // Preparing for timeout; if response is received, this value will be updated from the callback.
             node_id_allocation_unique_id_offset_ = 0;
         }
+
+        watchdog_.reset();
     }
 
     void main() override
@@ -594,6 +612,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         /*
          * CAN bit rate
          */
+        watchdog_.reset();
+
         if (can_bus_bit_rate_ == 0)
         {
             performCANBitRateDetection();
@@ -609,6 +629,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         /*
          * Node ID
          */
+        watchdog_.reset();
+
         if (canardGetLocalNodeID(&canard_) == 0)
         {
             performDynamicNodeIDAllocation();
@@ -627,6 +649,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         /*
          * Init CAN in proper mode now
          */
+        watchdog_.reset();
+
         while (true)
         {
             // Accept only correctly addressed service requests and responses
@@ -653,6 +677,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         {
             assert((confirmed_local_node_id_ > 0) && (canardGetLocalNodeID(&canard_) > 0));
 
+            watchdog_.reset();
+
             /*
              * Waiting for the firmware update request
              */
@@ -660,6 +686,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             {
                 while ((!os::isRebootRequested()) && (remote_server_node_id_ == 0))
                 {
+                    watchdog_.reset();
                     poll();
                 }
             }
@@ -675,7 +702,9 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             /*
              * Rewriting the old firmware with the new file
              */
+            watchdog_.reset();
             const int result = bootloader_.upgradeApp(*this);
+            watchdog_.reset();
 
             if (result >= 0)
             {
@@ -702,6 +731,9 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             remote_server_node_id_ = 0;
             firmware_file_path_.clear();
         }
+
+        logger_.puts("Exiting");
+        watchdog_.reset();
     }
 
     int download(IDownloadStreamSink& sink) override
@@ -713,6 +745,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
         while (true)
         {
+            watchdog_.reset();
+
             if (os::isRebootRequested())
             {
                 return -ErrInterrupted;
@@ -743,7 +777,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             }
 
             /*
-             * Await response
+             * Await response.
+             * Note that the watchdog is not reset in the loop, since its timeout is large enough to wait for response.
              */
             const std::uint64_t response_deadline =
                 getMonotonicTimestampUSec() + ServiceRequestTimeoutMillisecond * 1000;
@@ -759,6 +794,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                     return -ErrTimeout;
                 }
             }
+
+            watchdog_.reset();
 
             if (read_result_ < 0)
             {
@@ -777,11 +814,13 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 const int res = sink.handleNextDataChunk(read_buffer_.data(), read_result_);
                 if (res < 0)
                 {
+                    watchdog_.reset();
                     return res;
                 }
             }
             else
             {
+                watchdog_.reset();
                 return 0;       // Done
             }
 
@@ -798,6 +837,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
              * Wait in order to avoid bus congestion
              * The magic shift ensures that the relative bus utilization does not depend on the bit rate.
              */
+            watchdog_.reset();
+
             const std::uint64_t wait_deadline =
                 getMonotonicTimestampUSec() + 1000000UL / (1UL + (can_bus_bit_rate_ >> 16));
 
@@ -1176,6 +1217,8 @@ public:
         {
             canardSetLocalNodeID(&canard_, node_id);
         }
+
+        watchdog_.startMSec(impl_::WatchdogTimeoutMillisecond);
 
         return chibios_rt::BaseStaticThread<StackSize>::start(thread_priority);
     }
