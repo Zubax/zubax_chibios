@@ -98,7 +98,7 @@ class AppDescriptor(object):
 
 
 class FirmwareImage(object):
-    # Padding cannot be less than 8 bytes because CRC is validated in blocks 8 bytes large, for performance reasons
+    # Large padding may allow for faster CRC verification
     PADDING = 8
     
     def __init__(self, path, mode="r"):

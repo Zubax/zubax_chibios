@@ -142,10 +142,12 @@ class Bootloader
 
     /**
      * Refer to the Brickproof Bootloader specs.
-     * Note that the structure must be aligned at 8 bytes boundary!
+     * Note that the structure must be aligned at 8 bytes boundary, and the image must be padded to 8 bytes!
      */
     struct __attribute__((packed)) AppDescriptor
     {
+        static constexpr unsigned ImagePaddingBytes = 8;
+
         std::array<std::uint8_t, 8> signature;
         AppInfo app_info;
         std::array<std::uint8_t, 6> reserved;
@@ -159,7 +161,9 @@ class Bootloader
         {
             const auto sgn = getSignatureValue();
             return std::equal(std::begin(signature), std::end(signature), std::begin(sgn)) &&
-                   (app_info.image_size > 0) && (app_info.image_size <= max_application_image_size);
+                   (app_info.image_size > 0) &&
+                   (app_info.image_size <= max_application_image_size) &&
+                   ((app_info.image_size % ImagePaddingBytes) == 0);
         }
     };
     static_assert(sizeof(AppDescriptor) == 32, "Invalid packing");
