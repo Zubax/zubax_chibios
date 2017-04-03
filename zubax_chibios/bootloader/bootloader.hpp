@@ -127,6 +127,7 @@ public:
 
 /**
  * Main bootloader controller.
+ * Beware that this class has a large buffer field used to cache ROM reads. Do not allocate it on the stack.
  */
 class Bootloader
 {
@@ -138,6 +139,8 @@ class Bootloader
     const std::uint32_t max_application_image_size_;
     const unsigned boot_delay_msec_;
     ::systime_t boot_delay_started_at_st_;
+
+    std::uint8_t rom_buffer_[1024];             ///< Larger buffer enables faster CRC verification, which is important
 
     chibios_rt::Mutex mutex_;
 

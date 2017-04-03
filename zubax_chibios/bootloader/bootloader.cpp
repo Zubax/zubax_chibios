@@ -94,27 +94,48 @@ std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
             }
         }
 
-        // Checking firmware CRC
+        // Checking firmware CRC.
+        // This block is very computationally intensive, so it has been carefully optimized for speed.
         {
-            constexpr auto DWordSize = 8;
-            const auto crc_offset_in_dwords = (offset + offsetof(AppDescriptor, app_info.image_crc)) / DWordSize;
-            const auto image_size_in_dwords = desc.app_info.image_size / DWordSize;
-
+            const auto crc_offset = offset + offsetof(AppDescriptor, app_info.image_crc);
             CRC64WE crc;
 
-            for (unsigned i = 0; i < image_size_in_dwords; i++)
+            // Read large chunks until the CRC field is reached (in most cases it will fit in just one chunk)
+            for (std::size_t i = 0; i < crc_offset;)
             {
-                std::uint64_t dword = 0;
-                if (i != crc_offset_in_dwords)
+                const int res = backend_.read(i, rom_buffer_,
+                                              std::min<std::size_t>(sizeof(rom_buffer_), crc_offset - i));
+                if LIKELY(res > 0)
                 {
-                    int res = backend_.read(i * DWordSize, &dword, DWordSize);
-                    if (res != DWordSize)
-                    {
-                        continue;
-                    }
+                    i += res;
+                    crc.add(rom_buffer_, res);
                 }
+                else
+                {
+                    break;
+                }
+            }
 
-                crc.add(&dword, DWordSize);
+            // Fill CRC with zero
+            {
+                static const std::uint8_t dummy[8]{0};
+                crc.add(&dummy[0], sizeof(dummy));
+            }
+
+            // Read the rest of the image in large chunks
+            for (std::size_t i = crc_offset + 8; i < desc.app_info.image_size;)
+            {
+                const int res = backend_.read(i, rom_buffer_,
+                                              std::min<std::size_t>(sizeof(rom_buffer_), desc.app_info.image_size - i));
+                if LIKELY(res > 0)
+                {
+                    i += res;
+                    crc.add(rom_buffer_, res);
+                }
+                else
+                {
+                    break;
+                }
             }
 
             if (crc.get() != desc.app_info.image_crc)
