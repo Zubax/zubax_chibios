@@ -91,7 +91,7 @@ public:
     /**
      * @return number of bytes read; negative on error
      */
-    virtual int read(std::size_t offset, void* data, std::size_t size) = 0;
+    virtual int read(std::size_t offset, void* data, std::size_t size) const = 0;
 };
 
 /**
