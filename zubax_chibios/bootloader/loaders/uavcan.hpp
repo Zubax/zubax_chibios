@@ -624,8 +624,6 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             return;
         }
 
-        logger_.println("CAN bitrate %u", unsigned(can_bus_bit_rate_));
-
         /*
          * Node ID
          */
@@ -642,7 +640,10 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         }
 
         confirmed_local_node_id_ = canardGetLocalNodeID(&canard_);
-        logger_.println("Node ID %u", unsigned(confirmed_local_node_id_));
+
+        // This is the only info message we output during initialization.
+        // Fewer messages reduce the chances of breaking UART CLI data flow.
+        logger_.println("CAN %u bps, NID %u", unsigned(can_bus_bit_rate_), confirmed_local_node_id_);
 
         using namespace impl_;
 
