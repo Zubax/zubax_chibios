@@ -396,7 +396,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         const auto res = iface_.receive(timeout_msec);
         if (res.first < 0)
         {
-            logger_.println("RX err: %d", res.first);
+            logger_.println("RX err %d", res.first);
         }
         return res;
     }
@@ -406,7 +406,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         const int res = iface_.send(frame, timeout_msec);
         if (res < 0)
         {
-            logger_.println("TX err: %d", res);
+            logger_.println("TX err %d", res);
         }
         return res;
     }
@@ -624,7 +624,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             return;
         }
 
-        logger_.println("CAN bit rate: %u", unsigned(can_bus_bit_rate_));
+        logger_.println("CAN bitrate %u", unsigned(can_bus_bit_rate_));
 
         /*
          * Node ID
@@ -642,7 +642,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         }
 
         confirmed_local_node_id_ = canardGetLocalNodeID(&canard_);
-        logger_.println("Node ID: %u", unsigned(confirmed_local_node_id_));
+        logger_.println("Node ID %u", unsigned(confirmed_local_node_id_));
 
         using namespace impl_;
 
@@ -696,7 +696,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 break;
             }
 
-            logger_.println("FW server NID %u, path: %s",
+            logger_.println("FW server NID %u path %s",
                             unsigned(remote_server_node_id_), firmware_file_path_.c_str());
 
             /*
@@ -715,7 +715,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
                 }
                 else
                 {
-                    sendLog(LogLevel::Info, "Success");
+                    sendLog(LogLevel::Info, "OK");
                 }
             }
             else
@@ -732,7 +732,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             firmware_file_path_.clear();
         }
 
-        logger_.puts("Exiting");
+        logger_.puts("Exit");
         watchdog_.reset();
     }
 
