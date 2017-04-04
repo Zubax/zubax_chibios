@@ -144,8 +144,8 @@ class Node:
                 assert event.transfer.source_node_id == dest_node_id
                 result = event.response
             else:
-                raise Node.TimeoutException('Request to node %d with payload %r has timed out in %.3f seconds',
-                                            dest_node_id, payload, timeout or uavcan.node.DEFAULT_SERVICE_TIMEOUT)
+                raise Node.TimeoutException('Request to node %d with payload %r has timed out in %.3f seconds' %
+                                            (dest_node_id, payload, timeout or uavcan.node.DEFAULT_SERVICE_TIMEOUT))
 
         logger.debug('Synchronously requesting %r from %d\n%s',
                      uavcan.get_uavcan_data_type(payload), dest_node_id, uavcan.to_yaml(payload))
