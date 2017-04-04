@@ -357,6 +357,24 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         canardEncodeScalar(buffer, 40, 16, &vendor_specific_status_);
     }
 
+    void sendNodeStatus()
+    {
+        using namespace impl_;
+        std::uint8_t buffer[dsdl::NodeStatus::MaxSizeBytes]{};
+        makeNodeStatusMessage(buffer);
+        const int res = canardBroadcast(&canard_,
+                                        dsdl::NodeStatus::DataTypeSignature,
+                                        dsdl::NodeStatus::DataTypeID,
+                                        &node_status_transfer_id_,
+                                        CANARD_TRANSFER_PRIORITY_LOW,
+                                        buffer,
+                                        dsdl::NodeStatus::MaxSizeBytes);
+        if (res <= 0)
+        {
+            logger_.println("NodeStatus bc err %d", res);
+        }
+    }
+
     void sendLog(const impl_::LogLevel level, const os::heapless::String<90>& txt)
     {
         static const os::heapless::String<31> SourceName("Bootloader");
@@ -413,26 +431,12 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
     void handle1HzTasks()
     {
-        using namespace impl_;
-
         canardCleanupStaleTransfers(&canard_, getMonotonicTimestampUSec());
 
         // NodeStatus broadcasting
         if (init_done_ && (canardGetLocalNodeID(&canard_) > 0))
         {
-            std::uint8_t buffer[dsdl::NodeStatus::MaxSizeBytes]{};
-            makeNodeStatusMessage(buffer);
-            const int res = canardBroadcast(&canard_,
-                                            dsdl::NodeStatus::DataTypeSignature,
-                                            dsdl::NodeStatus::DataTypeID,
-                                            &node_status_transfer_id_,
-                                            CANARD_TRANSFER_PRIORITY_LOW,
-                                            buffer,
-                                            dsdl::NodeStatus::MaxSizeBytes);
-            if (res <= 0)
-            {
-                logger_.println("NodeStatus bc err %d", res);
-            }
+            sendNodeStatus();
         }
     }
 
@@ -707,6 +711,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             const int result = bootloader_.upgradeApp(*this);
             watchdog_.reset();
 
+            sendNodeStatus();   // Announcing the new status of the bootloader ASAP
+
             if (result >= 0)
             {
                 vendor_specific_status_ = 0;
@@ -743,6 +749,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
 
         std::uint64_t offset = 0;
         std::uint64_t next_progress_report_deadline = getMonotonicTimestampUSec();
+
+        sendNodeStatus();       // Announcing the new state of the bootloader ASAP
 
         while (true)
         {
