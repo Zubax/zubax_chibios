@@ -29,7 +29,7 @@ enum class State
     BootDelay,
     BootCancelled,
     AppUpgradeInProgress,
-    ReadyToBoot,
+    ReadyToBoot
 };
 
 static inline const char* stateToString(State state)
