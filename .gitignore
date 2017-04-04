@@ -21,3 +21,10 @@ __pycache__
 .project
 .cproject
 .pydevproject
+
+# JetBrains IDE
+.idea/
+
+# Misc
+*.log
+*.dump
