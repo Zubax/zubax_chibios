@@ -372,3 +372,5 @@ class Tester:
             bitrate_index = (bitrate_index + 1) % len(STANDARD_BIT_RATES)
 
             self._test_once(bitrate)
+
+            time.sleep(10)
