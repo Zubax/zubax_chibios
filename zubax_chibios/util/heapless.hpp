@@ -63,6 +63,10 @@ inline auto intToString(T number)
         char storage_[MaxChars + 1];   // Plus 1 because of zero termination.
 
     public:
+#ifdef __GNUC__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wbool-compare"
+#endif
         Container(T x) :
             offset_(MaxChars)          // Field initialization is not working in GCC in this context, not sure why.
         {
@@ -105,6 +109,9 @@ inline auto intToString(T number)
 
             assert(offset_ < MaxChars);                 // Making sure there was no overflow.
         }
+#ifdef __GNUC__
+# pragma GCC diagnostic pop
+#endif
 
         const char* c_str() const { return &storage_[offset_]; }
 
