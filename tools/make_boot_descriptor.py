@@ -186,9 +186,9 @@ class FirmwareImage(object):
             self._contents.seek(0, os.SEEK_END)
             self._length = self._contents.tell()
             if self._padding:
-                fill = self._padding - (self._length % self._padding)
-                self._length += fill
-                self._padding = fill
+                mod = self._length % self._padding
+                self._padding = self._padding - mod if mod else 0
+                self._length += self._padding
             self._contents.seek(prev_offset)
 
         return self._length
