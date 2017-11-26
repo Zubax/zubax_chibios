@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Zubax, zubax.com
+ * Copyright (c) 2014-2017 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
@@ -9,16 +9,18 @@
 #include <sys/types.h>
 #include "sys.hpp"
 
-void* operator new(size_t sz)
+static std::uint8_t g_operator_new_returns_pointer_to_this;
+
+void* operator new(size_t)
 {
-    DEBUG_LOG("operator new(%u)\n", unsigned(sz));
-    return chCoreAlloc(sz);
+    chSysHalt("operator new()");
+    return &g_operator_new_returns_pointer_to_this;
 }
 
-void* operator new[](size_t sz)
+void* operator new[](size_t)
 {
-    DEBUG_LOG("operator new[](%u)\n", unsigned(sz));
-    return chCoreAlloc(sz);
+    chSysHalt("operator new[]()");
+    return &g_operator_new_returns_pointer_to_this;
 }
 
 void operator delete(void*)

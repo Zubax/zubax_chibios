@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Zubax, zubax.com
+ * Copyright (c) 2014-2017 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
@@ -199,19 +199,19 @@ unsigned sleep(unsigned int seconds)
 
 void* malloc(size_t sz)
 {
-    DEBUG_LOG("malloc(%u)\n", unsigned(sz));
-    return chCoreAlloc(sz);
-}
-
-void* calloc(size_t, size_t)
-{
-    chSysHalt("calloc");
+    assert(sz == 0);                    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
 
-void* realloc(void*, size_t)
+void* calloc(size_t num, size_t sz)
 {
-    chSysHalt("realloc");
+    assert((num == 0) || (sz == 0));    // We want debug builds to fail loudly; release builds are given a pass
+    return nullptr;
+}
+
+void* realloc(void*, size_t sz)
+{
+    assert(sz == 0);                    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
 
