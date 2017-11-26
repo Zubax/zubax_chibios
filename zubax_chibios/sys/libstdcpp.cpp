@@ -11,11 +11,13 @@
 
 void* operator new(size_t sz)
 {
+    DEBUG_LOG("operator new(%u)\n", unsigned(sz));
     return chCoreAlloc(sz);
 }
 
 void* operator new[](size_t sz)
 {
+    DEBUG_LOG("operator new[](%u)\n", unsigned(sz));
     return chCoreAlloc(sz);
 }
 

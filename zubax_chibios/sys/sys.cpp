@@ -199,6 +199,7 @@ unsigned sleep(unsigned int seconds)
 
 void* malloc(size_t sz)
 {
+    DEBUG_LOG("malloc(%u)\n", unsigned(sz));
     return chCoreAlloc(sz);
 }
 
