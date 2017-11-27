@@ -15,6 +15,7 @@
 #include <cassert>
 #include <hal.h>
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/heapless.hpp>
 
 #if !defined(DISABLE_WATCHDOG_IN_RELEASE_BUILD)
 # define DISABLE_WATCHDOG_IN_RELEASE_BUILD      0
@@ -50,6 +51,10 @@ static std::uint8_t _num_watchdogs __attribute__((section (".noinit")));
 
 static bool _triggered_reset = false;
 
+#if DISABLE_WATCHDOG
+static std::uint32_t _last_reset_timer_sample;
+#endif
+
 static void setTimeout(unsigned timeout_ms)
 {
     if (timeout_ms <= 0)
@@ -60,6 +65,7 @@ static void setTimeout(unsigned timeout_ms)
 
 #if DISABLE_WATCHDOG
 # pragma message "WARNING: Watchdog is disabled!"
+    _last_reset_timer_sample = DWT->CYCCNT;
 #else
     unsigned reload_value = timeout_ms / 6;  // For 1/256 prescaler
     if (reload_value > MAX_RELOAD_VAL)
@@ -149,6 +155,24 @@ void watchdogReset(int id)
     {
         IWDG->KR = KR_KEY_RELOAD;
         _mask = 0;
+
+#if DISABLE_WATCHDOG
+        _last_reset_timer_sample = DWT->CYCCNT;
+#endif
     }
     chSysEnable();
+
+#if DISABLE_WATCHDOG
+    const std::uint32_t since_last_reset_ms =
+        (DWT->CYCCNT - _last_reset_timer_sample) / std::uint32_t(STM32_SYSCLK / 1000U) + 1U;
+
+    if (since_last_reset_ms >= _wdg_timeout_ms)
+    {
+        chibios_rt::System::halt(os::heapless::concatenate(
+            "WATCHDOG WOULD RESET! ",
+            since_last_reset_ms, "ms>=", _wdg_timeout_ms, "ms,",
+            _mask, ",", _num_watchdogs
+            ).c_str());
+    }
+#endif
 }
