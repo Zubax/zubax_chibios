@@ -166,7 +166,10 @@ public:
         String<(DefaultStringCapacity > Capacity) ? DefaultStringCapacity : Capacity> output;
 
         using namespace std;
-        const int res = snprintf(output.begin(), output.capacity(), this->c_str(), std::forward<Args>(format_args)...);
+        const int res = snprintf(&output.front(),
+                                 output.capacity(),
+                                 this->c_str(),
+                                 std::forward<Args>(format_args)...);
         if (res > 0)
         {
             output.len_ = std::min(output.capacity(), unsigned(res));
@@ -180,8 +183,8 @@ public:
      */
     using value_type = char;
     using size_type = unsigned;
-    using iterator = char*;
-    using const_iterator = const iterator;
+    using iterator = const char*;               ///< Made const intentionally
+    using const_iterator = const char*;
 
     constexpr unsigned capacity() const { return Capacity; }
     constexpr unsigned max_size() const { return Capacity; }
@@ -193,7 +196,11 @@ public:
 
     const char* c_str() const { return &buf_[0]; }
 
-    void clear() { len_ = 0; }
+    void clear()
+    {
+        len_ = 0;
+        buf_[len_] = '\0';
+    }
 
     template <unsigned C>
     void append(const String<C>& s)
@@ -273,25 +280,12 @@ public:
     }
     const char& back() const { return const_cast<String*>(this)->back(); }
 
-    template <unsigned C>
-    bool compare(const String<C>& s) const
-    {
-        return compare(s.c_str());
-    }
-
-    bool compare(const char* s) const
-    {
-        return 0 == std::strncmp(this->c_str(), s, Capacity);
-    }
-
     /*
-     * Iterators
+     * Iterators - only const iterators are provided for safety reasons.
+     * It is easy to accidentally bring the object into an invalid state by zeroing a char in the middle.
      */
     const char* begin() const { return &buf_[0]; }
     const char* end()   const { return &buf_[len_]; }
-
-    char* begin() { return &buf_[0]; }
-    char* end()   { return &buf_[len_]; }
 
     /*
      * Operators
@@ -325,8 +319,16 @@ public:
     }
     const char& operator[](unsigned index) const { return const_cast<String*>(this)->operator[](index); }
 
-    template <typename T>
-    bool operator==(const T& s) const { return compare(s); }
+    template <typename T, typename = decltype(std::declval<T>().begin())>
+    bool operator==(const T& s) const
+    {
+        return std::equal(begin(), end(), s.begin(), s.end());
+    }
+
+    bool operator==(const char* s) const
+    {
+        return 0 == std::strncmp(this->c_str(), s, sizeof(buf_));
+    }
 
     /*
      * Helpers
@@ -392,7 +394,7 @@ inline auto operator+(const char* left, const String<Capacity>& right)
 template <unsigned Capacity>
 inline bool operator==(const char* left, const String<Capacity>& right)
 {
-    return right.compare(left);
+    return right == left;
 }
 /**
  * @}
