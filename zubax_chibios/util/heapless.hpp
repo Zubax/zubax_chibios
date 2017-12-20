@@ -166,7 +166,7 @@ public:
         String<(DefaultStringCapacity > Capacity) ? DefaultStringCapacity : Capacity> output;
 
         using namespace std;
-        const int res = snprintf(&output.front(),
+        const int res = snprintf(&output.buf_[0],
                                  output.capacity(),
                                  this->c_str(),
                                  std::forward<Args>(format_args)...);
