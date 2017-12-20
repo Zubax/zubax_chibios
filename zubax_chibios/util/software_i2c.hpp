@@ -26,6 +26,13 @@ namespace software_i2c
  * Generic bit-banging I2C master on bare GPIO.
  * The pins must be configured in open-drain mode, at high level by default.
  * This class automatically emits I2C stop condition and releases the pins when the instance is destroyed.
+ *
+ * All access must be done from regular threads outside of critical sections.
+ *
+ * All access is protected with a mutex, so that I2C transactions are atomic, and the class can be used from
+ * multiple threads concurrently. If recursive mutexes are enabled, it is also possible to lock the bus
+ * for multiple atomic transactions.
+ *
  * Usage:
  *     Master master(GPIO_PORT_I2C_SCL, GPIO_PIN_I2C_SCL,
  *                   GPIO_PORT_I2C_SDA, GPIO_PIN_I2C_SDA);
@@ -33,7 +40,7 @@ namespace software_i2c
  *     std::array<std::uint8_t, 5> rx;
  *     auto result = master.exchange(address, tx, rx);
  */
-class Master
+class Master final
 {
 public:
     enum class Result
@@ -45,16 +52,16 @@ public:
     };
 
 private:
-    static constexpr unsigned DefaultClockStretchTimeoutUSec = 10000;
-    static constexpr unsigned DefaultCycleDelayUSec = 10;
+    static constexpr std::uint32_t DefaultClockStretchTimeoutUSec = 10000;
+    static constexpr std::uint32_t DefaultCycleDelayUSec = 10;
 
     class I2CPin
     {
-        GPIO_TypeDef* const port_;
-        const unsigned pin_;
+        ::ioportid_t const port_;
+        const std::uint8_t pin_;
 
     public:
-        I2CPin(GPIO_TypeDef* gpio_port, unsigned gpio_pin) :
+        I2CPin(::ioportid_t gpio_port, std::uint8_t gpio_pin) :
             port_(gpio_port), pin_(gpio_pin)
         {
         }
@@ -69,11 +76,12 @@ private:
         bool get() const { return palReadPad(port_, pin_); }
     };
 
+    chibios_rt::Mutex mutex_;
     I2CPin scl_;
     I2CPin sda_;
     bool started_ = false;
-    const unsigned clock_stretch_timeout_usec_;
-    const unsigned delay_usec_;
+    const std::uint32_t clock_stretch_timeout_usec_;
+    const std::uint32_t delay_usec_;
 
     void delay() const
     {
@@ -132,28 +140,6 @@ private:
         out_bit = sda_.get();
         scl_.clear();
         return Result::OK;
-    }
-
-public:
-    Master(GPIO_TypeDef* scl_port, unsigned scl_pin,
-           GPIO_TypeDef* sda_port, unsigned sda_pin,
-           unsigned arg_clock_stretch_timeout_usec = DefaultClockStretchTimeoutUSec,
-           unsigned arg_delay_usec = DefaultCycleDelayUSec) :
-        scl_(scl_port, scl_pin),
-        sda_(sda_port, sda_pin),
-        clock_stretch_timeout_usec_(arg_clock_stretch_timeout_usec),
-        delay_usec_(arg_delay_usec)
-    { }
-
-    /**
-     * Destructor ensures that the bus is correctly stopped, and GPIO pins are correctly set to the high level.
-     */
-    ~Master()
-    {
-        if (started_)
-        {
-            (void)stop();
-        }
     }
 
     /**
@@ -220,7 +206,7 @@ public:
             {
                 return res;
             }
-            byte <<= 1;
+            byte = std::uint8_t(byte << 1U);
         }
 
         bool nack = false;
@@ -236,8 +222,7 @@ public:
     Result writeAddress7Bit(std::uint8_t address, bool read)
     {
         assert(address < 128U);
-        address <<= 1U;
-        address |= std::uint8_t(read);
+        address = std::uint8_t((address << 1U) | read);
         return writeByte(address);
     }
 
@@ -253,10 +238,66 @@ public:
             {
                 return res;
             }
-            out_byte = (out_byte << 1) | (bit ? 1U : 0U);
+            out_byte = std::uint8_t((out_byte << 1) | (bit ? 1U : 0U));
         }
 
         return writeBit(!ack);
+    }
+
+    // Master is non-copyable! Otherwise that breaks the mutex.
+    Master(const Master&)  = delete;
+    Master(const Master&&) = delete;
+    Master& operator=(const Master&)  = delete;
+    Master& operator=(const Master&&) = delete;
+
+public:
+    Master(::ioportid_t scl_port, std::uint8_t scl_pin,
+           ::ioportid_t sda_port, std::uint8_t sda_pin,
+           std::uint32_t arg_clock_stretch_timeout_usec = DefaultClockStretchTimeoutUSec,
+           std::uint32_t arg_delay_usec = DefaultCycleDelayUSec) :
+        scl_(scl_port, scl_pin),
+        sda_(sda_port, sda_pin),
+        clock_stretch_timeout_usec_(arg_clock_stretch_timeout_usec),
+        delay_usec_(arg_delay_usec)
+    { }
+
+    /**
+     * Destructor ensures that the bus is correctly stopped, and GPIO pins are correctly set to the high level.
+     */
+    ~Master()
+    {
+        if (started_)
+        {
+            (void)stop();
+        }
+    }
+
+    /**
+     * Modulates a bus reset sequence.
+     * The reset sequence allows the master to bring the bus into a known state.
+     * Its use is advised by some EEPROM memory chip vendors, for example, like ROHM BR24G128.
+     */
+    void reset()
+    {
+        static constexpr std::uint8_t MaxClockCycles = 30;
+        static constexpr std::uint8_t AllowStopIfSDAHighAfterThisManyClockCycles = 14;
+
+        ::os::MutexLocker bus_locker(mutex_);
+
+        for (std::uint8_t i = 0; i < MaxClockCycles; i++)
+        {
+            bool the_bit = false;
+            (void) readBit(the_bit);
+            if ((i > AllowStopIfSDAHighAfterThisManyClockCycles) && the_bit)
+            {
+                break;
+            }
+        }
+
+        delay();
+
+        started_ = true;
+        (void) stop();
     }
 
     /**
@@ -267,6 +308,8 @@ public:
                     const void* tx_data, const std::uint16_t tx_size,
                           void* rx_data, const std::uint16_t rx_size)
     {
+        ::os::MutexLocker bus_locker(mutex_);
+
         // This will ensure that the bus is correctly stopped at exit
         struct RAIIStopper
         {
@@ -298,7 +341,7 @@ public:
 
             const std::uint8_t* p = reinterpret_cast<const std::uint8_t*>(tx_data);
 
-            for (unsigned i = 0; i < tx_size; i++)
+            for (std::uint16_t i = 0; i < tx_size; i++)
             {
                 res = writeByte(*p++);
                 if (res != Result::OK)
@@ -345,13 +388,26 @@ public:
      *     std::array<std::uint8_t, 5> rx;
      *     auto result = master.exchange(address, tx, rx);
      */
-    template<unsigned TxSize, unsigned RxSize>
+    template<std::uint16_t TxSize, std::uint16_t RxSize>
     Result exchange(std::uint8_t address,
-                    const std::array<uint8_t, TxSize>& tx,
-                          std::array<uint8_t, RxSize>& rx)
+                    const std::array<std::uint8_t, TxSize>& tx,
+                          std::array<std::uint8_t, RxSize>& rx)
     {
         return exchange(address, tx.data(), TxSize, rx.data(), RxSize);
     }
+
+#if CH_CFG_USE_MUTEXES_RECURSIVE
+    /**
+     * This RAII helper allows the user to lock the bus for multiple subsequent atomic transactions.
+     * This class is only available if recursive mutexes are enabled.
+     */
+    class AtomicBusAccessLocker
+    {
+        ::os::MutexLocker mutex_locker_;
+    public:
+        explicit AtomicBusAccessLocker(Master& m) : mutex_locker_(m.mutex_) { }
+    };
+#endif
 };
 
 }
