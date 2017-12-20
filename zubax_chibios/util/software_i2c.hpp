@@ -388,7 +388,7 @@ public:
      *     std::array<std::uint8_t, 5> rx;
      *     auto result = master.exchange(address, tx, rx);
      */
-    template<std::uint16_t TxSize, std::uint16_t RxSize>
+    template<std::size_t TxSize, std::size_t RxSize>
     Result exchange(std::uint8_t address,
                     const std::array<std::uint8_t, TxSize>& tx,
                           std::array<std::uint8_t, RxSize>& rx)
