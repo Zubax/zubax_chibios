@@ -115,6 +115,7 @@ static bool isValid(const ConfigParam* descr, float value)
             return false;
         }
     }
+    [[fallthrough]];
     /* no break */
     case CONFIG_TYPE_FLOAT:
     {
