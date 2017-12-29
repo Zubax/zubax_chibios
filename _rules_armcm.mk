@@ -104,8 +104,11 @@ USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit -u_
 # Fixing float constants - otherwise the C++ standard library may fail to compile:
 UDEFS += -fno-single-precision-constant
 
+# Unfortunately, we have to allow the use of the deprecated "register" keyword, because it is used in the
+# sources of the operating system.
+# TODO: Compile the operating system as a static library!
 USE_COPT += -std=c99
-USE_CPPOPT += -std=c++14 -fno-rtti -fno-exceptions -fno-threadsafe-statics
+USE_CPPOPT += -std=c++17 -fno-rtti -fno-exceptions -fno-threadsafe-statics -Wno-error=register -Wno-register
 
 USE_OPT += -nodefaultlibs -lc -lgcc -lm
 
