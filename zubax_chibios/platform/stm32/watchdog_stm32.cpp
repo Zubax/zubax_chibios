@@ -166,11 +166,11 @@ void watchdogReset(int id)
     const std::uint32_t since_last_reset_ms =
         (DWT->CYCCNT - _last_reset_timer_sample) / std::uint32_t(STM32_SYSCLK / 1000U) + 1U;
 
-    if (since_last_reset_ms >= _wdg_timeout_ms)
+    if (since_last_reset_ms >= (_wdg_timeout_ms * 3 / 4))
     {
         chibios_rt::System::halt(os::heapless::concatenate(
             "WATCHDOG WOULD RESET! ",
-            since_last_reset_ms, "ms>=", _wdg_timeout_ms, "ms,",
+            since_last_reset_ms, "ms~", _wdg_timeout_ms, "ms,",
             _mask, ",", _num_watchdogs
             ).c_str());
     }
