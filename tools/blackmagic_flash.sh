@@ -5,6 +5,12 @@
 # Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
+function die()
+{
+    echo "$@" 1>&2
+    exit 1
+}
+
 PORT="$1"
 if [ -z "$PORT" ]
 then
@@ -15,7 +21,7 @@ then
         PORT=$(readlink -f /dev/serial/by-id/*Black*Magic*Probe*0)
     fi
 
-    [ -z "$PORT" ] && exit 1
+    [ -e "$PORT" ] || die "Debugger not found"
     echo "Using port: $PORT"
 fi
 
@@ -24,12 +30,9 @@ elf=$(ls ../../build/*.elf 2>/dev/null)
 if [ -z "$elf" ]; then
     elf=$(ls build/*.elf 2>/dev/null)
 fi
-if [ -z "$elf" ]; then
-    echo "No firmware found"
-    exit 1
-fi
+[ -e "$elf" ] || die "No firmware found"
 
-arm-none-eabi-size $elf || exit 1
+arm-none-eabi-size $elf || die "Could not check the size of the binary"
 
 tmpfile=.blackmagic_gdb.tmp
 cat > $tmpfile <<EOF
@@ -40,6 +43,7 @@ load
 kill
 EOF
 
-arm-none-eabi-gdb $elf --batch -x $tmpfile
+# Key -n to ignore .gdbinit
+arm-none-eabi-gdb $elf -n --batch -x $tmpfile
 
 rm -f $tmpfile
