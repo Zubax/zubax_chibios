@@ -8,16 +8,18 @@
 #include <cstdlib>
 #include <sys/types.h>
 #include "sys.hpp"
+#include <new>
+
 
 static std::uint8_t g_operator_new_returns_pointer_to_this;
 
-void* operator new(size_t)
+void* operator new(std::size_t)
 {
     chSysHalt("operator new()");
     return &g_operator_new_returns_pointer_to_this;
 }
 
-void* operator new[](size_t)
+void* operator new[](std::size_t)
 {
     chSysHalt("operator new[]()");
     return &g_operator_new_returns_pointer_to_this;
@@ -33,15 +35,37 @@ void operator delete[](void*)
     chSysHalt("delete");
 }
 
-void operator delete(void*, unsigned)
+void operator delete(void*, std::size_t)
 {
     chSysHalt("delete");
 }
 
-void operator delete[](void*, unsigned)
+void operator delete[](void*, std::size_t)
 {
     chSysHalt("delete");
 }
+
+#if __cpp_aligned_new
+void operator delete(void*, std::align_val_t)
+{
+    chSysHalt("delete");
+}
+
+void operator delete[](void*, std::align_val_t)
+{
+    chSysHalt("delete");
+}
+
+void operator delete(void*, std::size_t, std::align_val_t)
+{
+    chSysHalt("delete");
+}
+
+void operator delete[](void*, std::size_t, std::align_val_t)
+{
+    chSysHalt("delete");
+}
+#endif
 
 /*
  * stdlibc++ workaround.
