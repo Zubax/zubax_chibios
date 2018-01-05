@@ -68,10 +68,14 @@ extern "C"
 {
 
 __attribute__((weak))
-void *__dso_handle;
+void* __dso_handle;
 
 __attribute__((weak))
-int __errno;
+int* __errno()
+{
+    static int en;
+    return &en;
+}
 
 
 void zchSysHaltHook(const char* msg)
