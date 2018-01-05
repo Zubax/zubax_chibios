@@ -16,6 +16,7 @@
 #include <limits>
 #include <cstdint>
 #include <cassert>
+#include <functional>
 
 
 #ifndef STRINGIZE
@@ -37,7 +38,7 @@
     } while (0)
 
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
-# define DEBUG_LOG(...)         ::os::lowsyslog(__VA_ARGS__)
+# define DEBUG_LOG(...)         ::std::printf(__VA_ARGS__)
 #else
 # define DEBUG_LOG(...)         ((void)0)
 #endif
@@ -45,20 +46,8 @@
 
 namespace os
 {
-
-static constexpr unsigned DefaultStdIOByteWriteTimeoutMSec = 2;		///< Enough for 115200 baud and higher
-
 /**
- * NuttX-like console print; should be used instead of printf()/chprintf()
- * This function always outputs into the debug UART regardless of the current stdout configuration.
- * TODO: use type safe version based on variadic templates.
- */
-__attribute__ ((format (printf, 1, 2)))
-void lowsyslog(const char* format, ...);
-
-/**
- * A helper that works like @ref lowsyslog() except that it adds the name of the calling module
- * before the message.
+ * A standard output helper that adds the name of the calling module before the message.
  */
 class Logger
 {
@@ -76,19 +65,27 @@ public:
 };
 
 /**
- * Changes current stdout stream and its write timeout.
- * This setting does not affect @ref lowsyslog().
+ * This delegate is invoked when the OS needs to emit a standard output.
+ * It accepts a pointer to the data and the number of data bytes to write,
+ * and returns whether all of the data could be written. If not, rest of the write operation will be aborted.
+ * Normally, the handler should never block.
+ * @ref setStandardOutputSink().
  */
-void setStdIOStream(::BaseChannel* stream, unsigned byte_write_timeout_msec = DefaultStdIOByteWriteTimeoutMSec);
-::BaseChannel* getStdIOStream();
+using StandardOutputSink = std::function<bool (const std::uint8_t*, std::size_t)>;
 
 /**
- * Provides access to the stdout mutex.
+ * Assigns an application-specific sink for stdout.
+ * The new sink will replace the default one.
+ * The default sink simply prints all data into the system default UART port.
+ * Access to the sink is always serialized through a global mutex, i.e. it is guaranteed that only one
+ * thread can access the sink at any given time.
+ * Assign an empty function to restore the default sink.
+ * Note that the library may segment writes into multiple sequential invocations of the sink.
  */
-chibios_rt::Mutex& getStdIOMutex();
+void setStandardOutputSink(const StandardOutputSink& sink);
 
 /**
- * Emergency termination hook that can be overriden by the application.
+ * Emergency termination hook that can be overridden by the application.
  * The hook must return immediately after bringing the hardware into a safe state.
  */
 extern void applicationHaltHook(void);
