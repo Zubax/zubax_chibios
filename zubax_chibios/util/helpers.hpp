@@ -13,6 +13,8 @@
 #include <cassert>
 #include <cstdint>
 #include <utility>
+#include <algorithm>
+#include <iterator>
 
 #define EXECUTE_ONCE_CAT1_(a, b) EXECUTE_ONCE_CAT2_(a, b)
 #define EXECUTE_ONCE_CAT2_(a, b) a##b
