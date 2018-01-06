@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2015 Zubax Robotics, zubax.com
+# Copyright (c) 2015-2018 Zubax Robotics, zubax.com
 # Distributed under the MIT License, available in the file LICENSE.
 # Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
