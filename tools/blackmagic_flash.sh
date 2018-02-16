@@ -30,6 +30,7 @@ then
 fi
 
 # Find the firmware ELF
+elf="$2"
 if [ ! -e "$elf" ]; then
 	elf=$(ls ../../build/*.elf 2>/dev/null)
 	if [ ! -e "$elf" ]; then
