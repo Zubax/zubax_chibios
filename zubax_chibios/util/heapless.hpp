@@ -71,6 +71,7 @@ inline auto intToString(T number)
             offset_(MaxChars)          // Field initialization is not working in GCC in this context, not sure why.
         {
             storage_[offset_] = '\0';
+            const bool negative = std::is_signed<T>::value && (x < 0);
 
             do
             {
@@ -90,18 +91,18 @@ inline auto intToString(T number)
 
                     // Signed integers are really tricky sometimes.
                     // We must not mix negative with positive to avoid implementation-defined behaviors.
-                    x = (x < 0) ? -(x / -Radix) : (x / Radix);
+                    x = T((x < 0) ? -(x / -Radix) : (x / Radix));
                 }
                 else
                 {
                     // Fast branch for unsigned arguments.
                     storage_[--offset_] = Alphabet[x % Radix];
-                    x /= Radix;
+                    x = T(x / Radix);
                 }
             }
             while (x != 0);
 
-            if (std::is_signed<T>::value && (x < 0))    // Should be optimized with constexpr if.
+            if (negative)
             {
                 assert(offset_ > 0);
                 storage_[--offset_] = '-';
