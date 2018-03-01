@@ -18,9 +18,11 @@
 #include <cstring>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <zubax_chibios/os.hpp>
 #include <zubax_chibios/util/float_eq.hpp>
 #include "config.hpp"
+#include "config.h"
 
 #ifndef CONFIG_PARAMS_MAX
 #  define CONFIG_PARAMS_MAX     40
@@ -402,6 +404,65 @@ int init(IStorageBackend* storage)
 unsigned getModificationCounter()
 {
     return _modification_cnt;           // Atomic access
+}
+
+
+template <typename T>
+static inline ParamMetadataPointer constructParamPointer(const int index)
+{
+    return ParamMetadataPointer(std::in_place_type<Param<T>*>, static_cast<Param<T>*>(_descr_pool[index]));
+}
+
+template <std::size_t CandidateTypeIndex = 0>
+ParamMetadataPointer deduceSmallestIntegralParamType(const ::ConfigParam& desc, const int index)
+{
+    if constexpr (CandidateTypeIndex < std::variant_size_v<ParamMetadataPointer>)
+    {
+        using T = typename std::remove_pointer_t<std::variant_alternative_t<CandidateTypeIndex,
+                                                                            ParamMetadataPointer>>::Type;
+        if constexpr (std::is_integral_v<T>)
+        {
+            constexpr auto min = float(std::numeric_limits<T>::min());
+            constexpr auto max = float(std::numeric_limits<T>::max());
+            if ((min <= desc.min) && (desc.max <= max))
+            {
+                return constructParamPointer<T>(index);
+            }
+            else
+            {
+                return deduceSmallestIntegralParamType<CandidateTypeIndex + 1>(desc, index);
+            }
+        }
+    }
+
+    // We got through all of the types and couldn't find one matching - last resort is return as float
+    return constructParamPointer<float>(index);
+}
+
+
+std::optional<ParamMetadataPointer> getParamMetadata(const char* name)
+{
+    // Locking is not required here, all access is read-only and the data is immutable
+    const int index = (name == nullptr) ? -1 : indexByName(name);
+    if (index < 0)
+    {
+        return {};
+    }
+
+    const auto desc = *_descr_pool[index];
+
+    if (desc.type == CONFIG_TYPE_BOOL)
+    {
+        return constructParamPointer<bool>(index);
+    }
+
+    if (desc.type == CONFIG_TYPE_FLOAT)
+    {
+        return constructParamPointer<float>(index);
+    }
+
+    assert(desc.type == CONFIG_TYPE_INT);
+    return deduceSmallestIntegralParamType(desc, index);
 }
 
 }
