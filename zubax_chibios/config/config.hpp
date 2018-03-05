@@ -115,6 +115,8 @@ struct Param<bool> : public ::ConfigParam
     }
 
     bool getDefaultValue() const { return !float_eq::closeToZero(::ConfigParam::default_); }
+    bool getMinValue()     const { return false; }
+    bool getMaxValue()     const { return true; }
 };
 
 } // namespace _internal
@@ -156,6 +158,11 @@ public:
  * Returns negative errno in case of unrecoverable fault.
  */
 int init(IStorageBackend* storage);
+
+/**
+ * Total number of known configuration parameters.
+ */
+std::uint16_t getParamCount();
 
 /**
  * Returns the number of times configSet() was executed successfully.

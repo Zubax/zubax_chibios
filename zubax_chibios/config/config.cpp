@@ -401,6 +401,11 @@ int init(IStorageBackend* storage)
     return flash_res;
 }
 
+std::uint16_t getParamCount()
+{
+    return std::uint16_t(_num_params);
+}
+
 unsigned getModificationCounter()
 {
     return _modification_cnt;           // Atomic access
