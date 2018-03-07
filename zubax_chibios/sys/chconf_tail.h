@@ -323,7 +323,7 @@
  * @note    The default is @p TRUE.
  */
 #ifndef CH_CFG_USE_MEMCORE
-#define CH_CFG_USE_MEMCORE                  TRUE
+#define CH_CFG_USE_MEMCORE                  FALSE
 #endif
 
 /**
