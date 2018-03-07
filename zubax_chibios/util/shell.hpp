@@ -11,10 +11,8 @@
 #pragma once
 
 #include <ch.hpp>
-#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
-# include <chprintf.h>
-# include <memstreams.h>
-#endif
+#include <chprintf.h>
+#include <memstreams.h>
 #include <cstring>
 #include <cstdint>
 #include <cstdio>
@@ -102,18 +100,11 @@ public:
         va_list ap;
         va_start(ap, format);
 
-#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
-        // Lightweight but limited in functionality
         MemoryStream ms;
         msObjectInit(&ms, reinterpret_cast<std::uint8_t*>(buffer), BufferSize, 0);
         auto chp = reinterpret_cast<::BaseSequentialStream*>(&ms);
         chvprintf(chp, format, ap);
         chSequentialStreamPut(chp, 0);
-#else
-        // Full featured but heavy
-        using namespace std;
-        vsnprintf(buffer, BufferSize, format, ap);
-#endif
 
         va_end(ap);
         return writeExpandingCrLf(CharacterTimeoutMSec, buffer);
