@@ -108,8 +108,8 @@ void zchSysHaltHook(const char* msg)
         {
             emergencyPrint(name);
             emergencyPrint("\t");
-            char buffer[40];
-            chsnprintf(&buffer[0], sizeof(buffer), "%x", value);
+            char buffer[20];
+            chsnprintf(&buffer[0], sizeof(buffer), "%08x", value);
             emergencyPrint(&buffer[0]);
             emergencyPrint("\r\n");
         };
