@@ -19,7 +19,6 @@
 #include <cstdarg>
 #include <cassert>
 #include <zubax_chibios/os.hpp>
-#include <zubax_chibios/util/heapless.hpp>
 #include <functional>
 
 
@@ -225,14 +224,11 @@ enum class Mode
  */
 template <unsigned MaxCommandHandlers = 10,
           unsigned MaxLineLength = 200,
-          unsigned MaxCommandArguments = 15,
-          unsigned MaxPromptLength = 40>
+          unsigned MaxCommandArguments = 15>
 class Shell
 {
 public:
-    using Prompt = heapless::String<MaxPromptLength>;
-
-    using PromptRenderer = std::function<Prompt ()>;
+    using PromptRenderer = std::function<const char* ()>;
 
 private:
     const PromptRenderer prompt_renderer_;
@@ -343,7 +339,7 @@ public:
                 need_prompt_ = false;
                 if (mode_ != Mode::Silent)
                 {
-                    (void)ios.print(prompt_renderer_().c_str());
+                    (void)ios.print(prompt_renderer_());
                 }
             }
 

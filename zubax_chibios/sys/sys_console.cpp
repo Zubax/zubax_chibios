@@ -76,13 +76,12 @@ static std::size_t genericPrint(const char* format, va_list vl)
     /*
      * Printing the string into the buffer
      */
-    static char buffer[256];
-
+    char buffer[256]{};
     MemoryStream ms;
     msObjectInit(&ms, (uint8_t*)buffer, sizeof(buffer), 0);
     ::BaseSequentialStream* chp = (::BaseSequentialStream*)&ms;
     chvprintf(chp, format, vl);
-    chSequentialStreamPut(chp, 0);
+    buffer[sizeof(buffer) - 1] = 0;     // Paranoid termination
 
     /*
      * Writing the buffer replacing "\n" --> "\r\n"

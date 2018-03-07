@@ -5,6 +5,7 @@
  */
 
 #include "sys.hpp"
+#include <chprintf.h>
 #include <ch.hpp>
 #include <unistd.h>
 #include <cstdio>
@@ -12,7 +13,6 @@
 #include <cstring>
 #include <cstdarg>
 #include <type_traits>
-#include <zubax_chibios/util/heapless.hpp>
 
 #if !CH_CFG_USE_REGISTRY
 # pragma message "CH_CFG_USE_REGISTRY is disabled, panic reports will be incomplete"
@@ -108,7 +108,9 @@ void zchSysHaltHook(const char* msg)
         {
             emergencyPrint(name);
             emergencyPrint("\t");
-            emergencyPrint(os::heapless::intToString<16>(value));
+            char buffer[40];
+            chsnprintf(&buffer[0], sizeof(buffer), "%x", value);
+            emergencyPrint(&buffer[0]);
             emergencyPrint("\r\n");
         };
 
@@ -179,7 +181,12 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
 {
     port_disable();
 
-    chSysHalt(os::heapless::concatenate(file, ":", line, " ", (func == nullptr) ? "" : func, ": ", expr).c_str());
+    // We're using static here in order to avoid overflowing the stack in the event of assertion panic
+    // Keeping the stack intact allows us to connect a debugger later and observe the state postmortem
+    static char buffer[200]{};
+    chsnprintf(&buffer[0], sizeof(buffer), "%s:%d:%s:%s",
+               file, line, (func == nullptr) ? "" : func, expr);
+    chSysHalt(&buffer[0]);
 
     while (true) { }
 }

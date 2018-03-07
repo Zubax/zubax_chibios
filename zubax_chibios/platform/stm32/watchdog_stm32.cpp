@@ -15,7 +15,6 @@
 #include <cassert>
 #include <hal.h>
 #include <zubax_chibios/os.hpp>
-#include <zubax_chibios/util/heapless.hpp>
 
 #if !defined(DISABLE_WATCHDOG_IN_RELEASE_BUILD)
 # define DISABLE_WATCHDOG_IN_RELEASE_BUILD      0
@@ -168,11 +167,8 @@ void watchdogReset(int id)
 
     if (since_last_reset_ms >= (_wdg_timeout_ms * 3 / 4))
     {
-        chibios_rt::System::halt(os::heapless::concatenate(
-            "WATCHDOG WOULD RESET! ",
-            since_last_reset_ms, "ms~", _wdg_timeout_ms, "ms,",
-            _mask, ",", _num_watchdogs
-            ).c_str());
+        // TODO: Add more debug information here
+        chibios_rt::System::halt("WATCHDOG WOULD RESET!");
     }
 #endif
 }
