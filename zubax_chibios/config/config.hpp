@@ -11,7 +11,6 @@
 #include <variant>
 #include <optional>
 #include <cstdint>
-#include <zubax_chibios/util/float_eq.hpp>
 #include "config.h"
 
 
@@ -96,7 +95,7 @@ struct Param<bool> : public ::ConfigParam
         ::configRegisterParam_(this);
     }
 
-    bool get() const { return !float_eq::closeToZero(::configGet(name)); }
+    bool get() const { return ::configGet(name) > 1e-6F; }
     operator bool() const { return get(); }
 
     int set(bool value) const
@@ -114,7 +113,7 @@ struct Param<bool> : public ::ConfigParam
         return ::configSave();
     }
 
-    bool getDefaultValue() const { return !float_eq::closeToZero(::ConfigParam::default_); }
+    bool getDefaultValue() const { return ::ConfigParam::default_ > 1e-6F; }
     bool getMinValue()     const { return false; }
     bool getMaxValue()     const { return true; }
 };
