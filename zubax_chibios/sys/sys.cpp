@@ -210,18 +210,22 @@ unsigned sleep(unsigned int seconds)
 
 void* malloc(size_t sz)
 {
+    (void) sz;
     assert(sz == 0);                    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
 
 void* calloc(size_t num, size_t sz)
 {
+    (void) num;
+    (void) sz;
     assert((num == 0) || (sz == 0));    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
 
 void* realloc(void*, size_t sz)
 {
+    (void) sz;
     assert(sz == 0);                    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
