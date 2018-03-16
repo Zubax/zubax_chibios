@@ -196,7 +196,11 @@ int usleep(useconds_t useconds)
 {
     assert((((uint64_t)useconds * (uint64_t)CH_CFG_ST_FREQUENCY + 999999ULL) / 1000000ULL)
            < (1ULL << CH_CFG_ST_RESOLUTION));
-    chThdSleepMicroseconds(useconds);
+    // http://pubs.opengroup.org/onlinepubs/7908799/xsh/usleep.html
+    if (useconds > 0)
+    {
+        chThdSleepMicroseconds(useconds);
+    }
     return 0;
 }
 
@@ -204,7 +208,11 @@ int usleep(useconds_t useconds)
 unsigned sleep(unsigned int seconds)
 {
     assert(((uint64_t)seconds * (uint64_t)CH_CFG_ST_FREQUENCY) < (1ULL << CH_CFG_ST_RESOLUTION));
-    chThdSleepSeconds(seconds);
+    // http://pubs.opengroup.org/onlinepubs/7908799/xsh/sleep.html
+    if (seconds > 0)
+    {
+        chThdSleepSeconds(seconds);
+    }
     return 0;
 }
 
