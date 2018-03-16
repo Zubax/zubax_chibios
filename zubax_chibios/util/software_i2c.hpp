@@ -14,7 +14,7 @@
 #pragma once
 
 #include <zubax_chibios/os.hpp>
-#include <unistd.h>
+#include <functional>
 #include <cstdint>
 #include <array>
 
@@ -52,7 +52,6 @@ public:
     };
 
     static constexpr std::uint32_t DefaultClockStretchTimeoutUSec = 10000;
-    static constexpr std::uint32_t DefaultCycleDelayUSec = 10;
 
 private:
     class I2CPin
@@ -80,13 +79,8 @@ private:
     I2CPin scl_;
     I2CPin sda_;
     bool started_ = false;
+    const std::function<void ()> delay_;
     const std::uint32_t clock_stretch_timeout_usec_;
-    const std::uint32_t delay_usec_;
-
-    void delay() const
-    {
-        ::usleep(delay_usec_);
-    }
 
     bool sclWait() const
     {
@@ -112,9 +106,9 @@ private:
         {
             sda_.clear();
         }
-        delay();
+        delay_();
         scl_.set();
-        delay();
+        delay_();
         if (!sclWait())
         {
             return Result::Timeout;
@@ -130,13 +124,13 @@ private:
     Result readBit(bool& out_bit)
     {
         sda_.set();
-        delay();
+        delay_();
         scl_.set();
         if (!sclWait())
         {
             return Result::Timeout;
         }
-        delay();
+        delay_();
         out_bit = sda_.get();
         scl_.clear();
         return Result::OK;
@@ -149,21 +143,21 @@ private:
     Result start()
     {
         sda_.set();
-        delay();
+        delay_();
         scl_.set();
         if (!sclWait())
         {
             return Result::Timeout;
         }
-        delay();
+        delay_();
         if (!sda_.get())
         {
             return Result::ArbitrationLost;
         }
         sda_.clear();
-        delay();
+        delay_();
         scl_.clear();
-        delay();
+        delay_();
         started_ = true;
         return Result::OK;
     }
@@ -178,20 +172,20 @@ private:
     {
         assert(started_);
         sda_.clear();
-        delay();
+        delay_();
         scl_.set();
         if (!sclWait())
         {
             return Result::Timeout;
         }
-        delay();
+        delay_();
         sda_.set();
-        delay();
+        delay_();
         if (!sda_.get())
         {
             return Result::ArbitrationLost;
         }
-        delay();
+        delay_();
         started_ = false;
         return Result::OK;
     }
@@ -253,13 +247,15 @@ private:
 public:
     Master(::ioportid_t scl_port, std::uint8_t scl_pin,
            ::ioportid_t sda_port, std::uint8_t sda_pin,
-           std::uint32_t arg_clock_stretch_timeout_usec = DefaultClockStretchTimeoutUSec,
-           std::uint32_t arg_delay_usec = DefaultCycleDelayUSec) :
+           std::function<void ()> arg_cycle_delay,
+           std::uint32_t arg_clock_stretch_timeout_usec = DefaultClockStretchTimeoutUSec) :
         scl_(scl_port, scl_pin),
         sda_(sda_port, sda_pin),
-        clock_stretch_timeout_usec_(arg_clock_stretch_timeout_usec),
-        delay_usec_(arg_delay_usec)
-    { }
+        delay_(arg_cycle_delay),
+        clock_stretch_timeout_usec_(arg_clock_stretch_timeout_usec)
+    {
+        assert(delay_);
+    }
 
     /**
      * Destructor ensures that the bus is correctly stopped, and GPIO pins are correctly set to the high level.
@@ -294,7 +290,7 @@ public:
             }
         }
 
-        delay();
+        delay_();
 
         started_ = true;
         (void) stop();
