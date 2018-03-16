@@ -51,10 +51,10 @@ public:
         NACK
     };
 
-private:
     static constexpr std::uint32_t DefaultClockStretchTimeoutUSec = 10000;
     static constexpr std::uint32_t DefaultCycleDelayUSec = 10;
 
+private:
     class I2CPin
     {
         ::ioportid_t const port_;
