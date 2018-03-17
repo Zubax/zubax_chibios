@@ -16,6 +16,7 @@
 #include <zubax_chibios/os.hpp>
 #include <functional>
 #include <cstdint>
+#include <chrono>
 #include <array>
 
 namespace os
@@ -51,8 +52,6 @@ public:
         NACK
     };
 
-    static constexpr std::uint32_t DefaultClockStretchTimeoutUSec = 10000;
-
 private:
     class I2CPin
     {
@@ -80,7 +79,7 @@ private:
     I2CPin sda_;
     bool started_ = false;
     const std::function<void ()> delay_;
-    const std::uint32_t clock_stretch_timeout_usec_;
+    const std::uint32_t clock_stretch_timeout_ticks_;
 
     bool sclWait() const
     {
@@ -88,7 +87,8 @@ private:
         while (!scl_.get())
         {
             chThdSleep(1);          // Sleeping one sys tick
-            if (chVTTimeElapsedSinceX(started_at) > US2ST(clock_stretch_timeout_usec_))
+            // Note that we should use greater comparison rather than greater-or-equal to prevent off-by-one errors
+            if (chVTTimeElapsedSinceX(started_at) > clock_stretch_timeout_ticks_)
             {
                 return false;
             }
@@ -245,16 +245,19 @@ private:
     Master& operator=(const Master&&) = delete;
 
 public:
+    template <typename Rep, typename Period>
     Master(::ioportid_t scl_port, std::uint8_t scl_pin,
            ::ioportid_t sda_port, std::uint8_t sda_pin,
-           std::function<void ()> arg_cycle_delay,
-           std::uint32_t arg_clock_stretch_timeout_usec = DefaultClockStretchTimeoutUSec) :
+           const std::function<void ()>& arg_cycle_delay,
+           const std::chrono::duration<Rep, Period> arg_clock_stretch_timeout) :
         scl_(scl_port, scl_pin),
         sda_(sda_port, sda_pin),
         delay_(arg_cycle_delay),
-        clock_stretch_timeout_usec_(arg_clock_stretch_timeout_usec)
+        clock_stretch_timeout_ticks_(US2ST(
+            std::chrono::duration_cast<std::chrono::microseconds>(arg_clock_stretch_timeout).count()))
     {
         assert(delay_);
+        assert(clock_stretch_timeout_ticks_ > 0);
     }
 
     /**
