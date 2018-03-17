@@ -15,6 +15,7 @@
 #include <cassert>
 #include <hal.h>
 #include <zubax_chibios/os.hpp>
+#include <chprintf.h>
 
 #if !defined(DISABLE_WATCHDOG_IN_RELEASE_BUILD)
 # define DISABLE_WATCHDOG_IN_RELEASE_BUILD      0
@@ -167,8 +168,15 @@ void watchdogReset(int id)
 
     if (since_last_reset_ms >= (_wdg_timeout_ms * 3 / 4))
     {
-        // TODO: Add more debug information here
-        chibios_rt::System::halt("WATCHDOG WOULD RESET!");
+        static char buffer[80]{};
+        chsnprintf(&buffer[0], sizeof(buffer),
+                   "WATCHDOG WOULD RESET! slr=%ums to=%ums msk=0x%x nw=%u",
+                   unsigned(since_last_reset_ms),
+                   unsigned(_wdg_timeout_ms),
+                   unsigned(_mask),
+                   unsigned(_num_watchdogs));
+
+        chibios_rt::System::halt(&buffer[0]);
     }
 #endif
 }
