@@ -9,6 +9,8 @@
 #include <cassert>
 #include <zubax_chibios/os.hpp>
 #include "watchdog.h"
+#include <chrono>
+
 
 namespace os
 {
@@ -22,11 +24,12 @@ class Timer
 public:
     bool isStarted() const { return id_ >= 0; }
 
-    void startMSec(unsigned timeout_ms)
+    template <typename Rep, typename Period>
+    void start(const std::chrono::duration<Rep, Period> timeout)
     {
         if (!isStarted())
         {
-            id_ = ::watchdogCreate(timeout_ms);
+            id_ = ::watchdogCreate(unsigned(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
             ASSERT_ALWAYS(isStarted());
         }
         else

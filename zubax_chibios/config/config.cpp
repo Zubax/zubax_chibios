@@ -18,9 +18,10 @@
 #include <cstring>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <zubax_chibios/os.hpp>
-#include <zubax_chibios/util/float_eq.hpp>
 #include "config.hpp"
+#include "config.h"
 
 #ifndef CONFIG_PARAMS_MAX
 #  define CONFIG_PARAMS_MAX     40
@@ -40,6 +41,8 @@ using namespace os::config;
 static constexpr int InitCodeRestored       = 1;
 static constexpr int InitCodeLayoutMismatch = 2;
 static constexpr int InitCodeCRCMismatch    = 3;
+
+static constexpr int MaxRetries = 3;
 
 
 static const ConfigParam* _descr_pool[CONFIG_PARAMS_MAX];
@@ -100,8 +103,7 @@ static bool isValid(const ConfigParam* descr, float value)
     {
     case CONFIG_TYPE_BOOL:
     {
-        if (!os::float_eq::close(value, 0.F) &&
-            !os::float_eq::close(value, 1.F))
+        if ((value < 0.0F) || (value > 1.0F))
         {
             return false;
         }
@@ -109,12 +111,12 @@ static bool isValid(const ConfigParam* descr, float value)
     }
     case CONFIG_TYPE_INT:
     {
-        volatile const long truncated = long(value);
-        if (!os::float_eq::close(value, float(truncated)))
+        if (std::abs(value) >= 16777216.0F)      // 2**32
         {
             return false;
         }
     }
+    [[fallthrough]];
     /* no break */
     case CONFIG_TYPE_FLOAT:
     {
@@ -167,7 +169,6 @@ void configRegisterParam_(const ConfigParam* param)
     // Register this param
     const int index = _num_params++;
     ASSERT_ALWAYS(_descr_pool[index] == NULL);
-    ASSERT_ALWAYS(os::float_eq::closeToZero(_value_pool[index]));
     _descr_pool[index] = param;
     _value_pool[index] = param->default_;
 
@@ -191,41 +192,51 @@ int configSave(void)
     ASSERT_ALWAYS(_frozen);
     os::MutexLocker locker(_mutex);
 
-    // Erase
-    int flash_res = g_storage->erase();
-    if (flash_res)
+    int flash_res = 0;
+    for (int attempt = 0; attempt < MaxRetries; attempt++)
     {
-        goto flash_error;
-    }
+        DEBUG_LOG("Save attempt %d\n", attempt);
 
-    // Write Layout
-    flash_res = g_storage->write(OFFSET_LAYOUT_HASH, &_layout_hash, 4);
-    if (flash_res)
-    {
-        goto flash_error;
-    }
-
-    {
-        // Write CRC
-        const int pool_len = _num_params * sizeof(_value_pool[0]);
-        const std::uint32_t true_crc = crc32(_value_pool, pool_len);
-        flash_res = g_storage->write(OFFSET_CRC, &true_crc, 4);
+        // Erase
+        flash_res = g_storage->erase();
         if (flash_res)
         {
-            goto flash_error;
+            DEBUG_LOG("Erase error %d\n", flash_res);
+            continue;
         }
 
-        // Write Values
-        flash_res = g_storage->write(OFFSET_VALUES, _value_pool, pool_len);
+        // Write Layout
+        flash_res = g_storage->write(OFFSET_LAYOUT_HASH, &_layout_hash, 4);
         if (flash_res)
         {
-            goto flash_error;
+            DEBUG_LOG("Hash write error %d\n", flash_res);
+            continue;
         }
+
+        {
+            // Write CRC
+            const int pool_len = _num_params * sizeof(_value_pool[0]);
+            const std::uint32_t true_crc = crc32(_value_pool, pool_len);
+            flash_res = g_storage->write(OFFSET_CRC, &true_crc, 4);
+            if (flash_res)
+            {
+                DEBUG_LOG("CRC write error %d\n", flash_res);
+                continue;
+            }
+
+            // Write Values
+            flash_res = g_storage->write(OFFSET_VALUES, _value_pool, pool_len);
+            if (flash_res)
+            {
+                DEBUG_LOG("Data write error %d\n", flash_res);
+                continue;
+            }
+        }
+
+        DEBUG_LOG("Saved successfully\n");
+        return 0;
     }
 
-    return 0;
-
-    flash_error:
     assert(flash_res);
     return flash_res;
 }
@@ -335,72 +346,135 @@ int init(IStorageBackend* storage)
 
     _frozen = true;
 
-    int retval = 0;
+    reinitializeDefaults();             // Init defaults by default
 
-    // Read the layout hash
-    std::uint32_t stored_layout_hash = 0xdeadbeef;
-    int flash_res = g_storage->read(OFFSET_LAYOUT_HASH, &stored_layout_hash, 4);
-    if (flash_res)
     {
-        goto flash_error;
+        std::uint32_t stored_layout_hash = 0xdeadbeef;
+
+        // Read the layout hash
+        for (int attempt = 0; attempt < MaxRetries; attempt++)
+        {
+            int flash_res = g_storage->read(OFFSET_LAYOUT_HASH, &stored_layout_hash, 4);
+            if (flash_res == 0)
+            {
+                if (stored_layout_hash == _layout_hash)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (stored_layout_hash != _layout_hash)
+        {
+            return InitCodeLayoutMismatch;
+        }
     }
 
     // If the layout hash has not changed, we can restore the values safely
-    if (stored_layout_hash == _layout_hash)
+    for (int attempt = 0; attempt < MaxRetries; attempt++)
     {
         const int pool_len = _num_params * sizeof(_value_pool[0]);
 
         // Read the data
-        flash_res = g_storage->read(OFFSET_VALUES, _value_pool, pool_len);
+        int flash_res = g_storage->read(OFFSET_VALUES, _value_pool, pool_len);
         if (flash_res)
         {
-            goto flash_error;
+            continue;
         }
 
         // Check CRC
         const std::uint32_t true_crc = crc32(_value_pool, pool_len);
         std::uint32_t stored_crc = 0;
         flash_res = g_storage->read(OFFSET_CRC, &stored_crc, 4);
-        if (flash_res)
+        if (flash_res || (true_crc != stored_crc))
         {
-            goto flash_error;
+            continue;
         }
 
-        // Reinitialize defaults if restored values are not valid or if CRC does not match
-        if (true_crc == stored_crc)
+        // Reinitialize defaults if restored values are not valid
+        for (int i = 0; i < _num_params; i++)
         {
-            retval = InitCodeRestored;
-            for (int i = 0; i < _num_params; i++)
+            if (!isValid(_descr_pool[i], _value_pool[i]))
             {
-                if (!isValid(_descr_pool[i], _value_pool[i]))
-                {
-                    _value_pool[i] = _descr_pool[i]->default_;
-                }
+                _value_pool[i] = _descr_pool[i]->default_;
             }
         }
-        else
-        {
-            reinitializeDefaults();
-            retval = InitCodeCRCMismatch;
-        }
-    }
-    else
-    {
-        reinitializeDefaults();
-        retval = InitCodeLayoutMismatch;
+
+        return InitCodeRestored;
     }
 
-    return retval;
-
-    flash_error:
-    assert(flash_res);
     reinitializeDefaults();
-    return flash_res;
+
+    return InitCodeCRCMismatch;
+}
+
+std::uint16_t getParamCount()
+{
+    return std::uint16_t(_num_params);
 }
 
 unsigned getModificationCounter()
 {
     return _modification_cnt;           // Atomic access
+}
+
+
+template <typename T>
+static inline ParamMetadataPointer constructParamPointer(const int index)
+{
+    return ParamMetadataPointer(std::in_place_type<Param<T>*>, static_cast<Param<T>*>(_descr_pool[index]));
+}
+
+template <std::size_t CandidateTypeIndex = 0>
+ParamMetadataPointer deduceSmallestIntegralParamType(const ::ConfigParam& desc, const int index)
+{
+    if constexpr (CandidateTypeIndex < std::variant_size_v<ParamMetadataPointer>)
+    {
+        using T = typename std::remove_pointer_t<std::variant_alternative_t<CandidateTypeIndex,
+                                                                            ParamMetadataPointer>>::Type;
+        if constexpr (std::is_integral_v<T>)
+        {
+            constexpr auto min = float(std::numeric_limits<T>::min());
+            constexpr auto max = float(std::numeric_limits<T>::max());
+            if ((min <= desc.min) && (desc.max <= max))
+            {
+                return constructParamPointer<T>(index);
+            }
+            else
+            {
+                return deduceSmallestIntegralParamType<CandidateTypeIndex + 1>(desc, index);
+            }
+        }
+    }
+
+    // We got through all of the types and couldn't find one matching - last resort is return as float
+    return constructParamPointer<float>(index);
+}
+
+
+std::optional<ParamMetadataPointer> getParamMetadata(const char* name)
+{
+    // Locking is not required here, all access is read-only and the data is immutable
+    const int index = (name == nullptr) ? -1 : indexByName(name);
+    if (index < 0)
+    {
+        return {};
+    }
+
+    const auto desc = *_descr_pool[index];
+
+    if (desc.type == CONFIG_TYPE_BOOL)
+    {
+        return constructParamPointer<bool>(index);
+    }
+
+    if (desc.type == CONFIG_TYPE_FLOAT)
+    {
+        return constructParamPointer<float>(index);
+    }
+
+    assert(desc.type == CONFIG_TYPE_INT);
+    return deduceSmallestIntegralParamType(desc, index);
 }
 
 }

@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2014 Zubax, zubax.com
+ * Copyright (c) 2014-2017 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "sys.hpp"
+#include <chprintf.h>
 #include <ch.hpp>
 #include <unistd.h>
 #include <cstdio>
@@ -12,7 +13,6 @@
 #include <cstring>
 #include <cstdarg>
 #include <type_traits>
-#include <zubax_chibios/util/heapless.hpp>
 
 #if !CH_CFG_USE_REGISTRY
 # pragma message "CH_CFG_USE_REGISTRY is disabled, panic reports will be incomplete"
@@ -40,11 +40,11 @@ void sleepUntilChTime(systime_t sleep_until)
     if (static_cast<std::make_signed<systime_t>::type>(sleep_until) < 0)
     {
 #if CH_CFG_USE_REGISTRY
-        const char* const name = chThdGetSelfX()->p_name;
+        const char* const name = chThdGetSelfX()->name;
 #else
         const char* const name = "<?>";
 #endif
-        lowsyslog("%s: Lag %d ts\n", name,
+        DEBUG_LOG("%s: Lag %d ts\n", name,
                   static_cast<int>(static_cast<std::make_signed<systime_t>::type>(sleep_until)));
     }
 #endif
@@ -68,10 +68,14 @@ extern "C"
 {
 
 __attribute__((weak))
-void *__dso_handle;
+void* __dso_handle;
 
 __attribute__((weak))
-int __errno;
+int* __errno()
+{
+    static int en;
+    return &en;
+}
 
 
 void zchSysHaltHook(const char* msg)
@@ -87,9 +91,9 @@ void zchSysHaltHook(const char* msg)
     emergencyPrint("\r\nPANIC [");
 #if CH_CFG_USE_REGISTRY
     const thread_t *pthread = chThdGetSelfX();
-    if (pthread && pthread->p_name)
+    if (pthread && pthread->name)
     {
-        emergencyPrint(pthread->p_name);
+        emergencyPrint(pthread->name);
     }
 #endif
     emergencyPrint("] ");
@@ -105,7 +109,9 @@ void zchSysHaltHook(const char* msg)
         {
             emergencyPrint(name);
             emergencyPrint("\t");
-            emergencyPrint(os::heapless::intToString<16>(value));
+            char buffer[20];
+            chsnprintf(&buffer[0], sizeof(buffer), "%08x", value);
+            emergencyPrint(&buffer[0]);
             emergencyPrint("\r\n");
         };
 
@@ -177,7 +183,12 @@ void __assert_func(const char* file, int line, const char* func, const char* exp
 {
     port_disable();
 
-    chSysHalt(os::heapless::concatenate(file, ":", line, " ", (func == nullptr) ? "" : func, ": ", expr).c_str());
+    // We're using static here in order to avoid overflowing the stack in the event of assertion panic
+    // Keeping the stack intact allows us to connect a debugger later and observe the state postmortem
+    static char buffer[200]{};
+    chsnprintf(&buffer[0], sizeof(buffer), "%s:%d:%s:%s",
+               file, line, (func == nullptr) ? "" : func, expr);
+    chSysHalt(&buffer[0]);
 
     while (true) { }
 }
@@ -187,7 +198,11 @@ int usleep(useconds_t useconds)
 {
     assert((((uint64_t)useconds * (uint64_t)CH_CFG_ST_FREQUENCY + 999999ULL) / 1000000ULL)
            < (1ULL << CH_CFG_ST_RESOLUTION));
-    chThdSleepMicroseconds(useconds);
+    // http://pubs.opengroup.org/onlinepubs/7908799/xsh/usleep.html
+    if (useconds > 0)
+    {
+        chThdSleepMicroseconds(useconds);
+    }
     return 0;
 }
 
@@ -195,30 +210,33 @@ int usleep(useconds_t useconds)
 unsigned sleep(unsigned int seconds)
 {
     assert(((uint64_t)seconds * (uint64_t)CH_CFG_ST_FREQUENCY) < (1ULL << CH_CFG_ST_RESOLUTION));
-    chThdSleepSeconds(seconds);
+    // http://pubs.opengroup.org/onlinepubs/7908799/xsh/sleep.html
+    if (seconds > 0)
+    {
+        chThdSleepSeconds(seconds);
+    }
     return 0;
 }
 
 void* malloc(size_t sz)
 {
-#if CH_CFG_USE_MEMCORE
-    return chCoreAlloc(sz);
-#else
     (void) sz;
-    chSysHalt("malloc");
-    return nullptr;
-#endif
-}
-
-void* calloc(size_t, size_t)
-{
-    chSysHalt("calloc");
+    assert(sz == 0);                    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
 
-void* realloc(void*, size_t)
+void* calloc(size_t num, size_t sz)
 {
-    chSysHalt("realloc");
+    (void) num;
+    (void) sz;
+    assert((num == 0) || (sz == 0));    // We want debug builds to fail loudly; release builds are given a pass
+    return nullptr;
+}
+
+void* realloc(void*, size_t sz)
+{
+    (void) sz;
+    assert(sz == 0);                    // We want debug builds to fail loudly; release builds are given a pass
     return nullptr;
 }
 

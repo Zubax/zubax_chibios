@@ -11,17 +11,14 @@
 #pragma once
 
 #include <ch.hpp>
-#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
-# include <chprintf.h>
-# include <memstreams.h>
-#endif
+#include <chprintf.h>
+#include <memstreams.h>
 #include <cstring>
 #include <cstdint>
 #include <cstdio>
 #include <cstdarg>
 #include <cassert>
 #include <zubax_chibios/os.hpp>
-#include <zubax_chibios/util/heapless.hpp>
 #include <functional>
 
 
@@ -102,18 +99,11 @@ public:
         va_list ap;
         va_start(ap, format);
 
-#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
-        // Lightweight but limited in functionality
         MemoryStream ms;
         msObjectInit(&ms, reinterpret_cast<std::uint8_t*>(buffer), BufferSize, 0);
         auto chp = reinterpret_cast<::BaseSequentialStream*>(&ms);
         chvprintf(chp, format, ap);
         chSequentialStreamPut(chp, 0);
-#else
-        // Full featured but heavy
-        using namespace std;
-        vsnprintf(buffer, BufferSize, format, ap);
-#endif
 
         va_end(ap);
         return writeExpandingCrLf(CharacterTimeoutMSec, buffer);
@@ -234,14 +224,11 @@ enum class Mode
  */
 template <unsigned MaxCommandHandlers = 10,
           unsigned MaxLineLength = 200,
-          unsigned MaxCommandArguments = 8,
-          unsigned MaxPromptLength = 40>
+          unsigned MaxCommandArguments = 15>
 class Shell
 {
 public:
-    using Prompt = heapless::String<MaxPromptLength>;
-
-    using PromptRenderer = std::function<Prompt ()>;
+    using PromptRenderer = std::function<const char* ()>;
 
 private:
     const PromptRenderer prompt_renderer_;
@@ -352,7 +339,7 @@ public:
                 need_prompt_ = false;
                 if (mode_ != Mode::Silent)
                 {
-                    (void)ios.print(prompt_renderer_().c_str());
+                    (void)ios.print(prompt_renderer_());
                 }
             }
 

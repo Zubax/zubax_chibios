@@ -8,19 +8,32 @@
 
 #include <type_traits>
 #include <functional>
-#include <zubax_chibios/util/float_eq.hpp>
+#include <variant>
+#include <optional>
+#include <cstdint>
 #include "config.h"
+
 
 namespace os
 {
 namespace config
 {
+/**
+ * Implementation details, do not use directly.
+ */
 namespace _internal
 {
-
+/**
+ * A convenient typesafe wrapper that hides the ugly C API.
+ * Someday in the future this will have to be re-implemented into a proper, better library.
+ */
 template <typename T>
 struct Param : public ::ConfigParam
 {
+    using Type = T;
+
+    using ::ConfigParam::name;
+
     Param(const Param&) = delete;
     Param& operator=(const Param&) = delete;
 
@@ -55,13 +68,21 @@ struct Param : public ::ConfigParam
         return ::configSave();
     }
 
-    bool isMax() const { return get() >= T(::ConfigParam::max); }
     bool isMin() const { return get() <= T(::ConfigParam::min); }
+    bool isMax() const { return get() >= T(::ConfigParam::max); }
+
+    T getDefaultValue() const { return T(::ConfigParam::default_); }
+    T getMinValue()     const { return T(::ConfigParam::min); }
+    T getMaxValue()     const { return T(::ConfigParam::max); }
 };
 
 template <>
 struct Param<bool> : public ::ConfigParam
 {
+    using Type = bool;
+
+    using ::ConfigParam::name;
+
     Param(const char* arg_name, bool arg_default) : ConfigParam
     {
         arg_name,
@@ -74,7 +95,7 @@ struct Param<bool> : public ::ConfigParam
         ::configRegisterParam_(this);
     }
 
-    bool get() const { return !float_eq::closeToZero(::configGet(name)); }
+    bool get() const { return ::configGet(name) > 1e-6F; }
     operator bool() const { return get(); }
 
     int set(bool value) const
@@ -91,6 +112,10 @@ struct Param<bool> : public ::ConfigParam
         }
         return ::configSave();
     }
+
+    bool getDefaultValue() const { return ::ConfigParam::default_ > 1e-6F; }
+    bool getMinValue()     const { return false; }
+    bool getMaxValue()     const { return true; }
 };
 
 } // namespace _internal
@@ -134,6 +159,11 @@ public:
 int init(IStorageBackend* storage);
 
 /**
+ * Total number of known configuration parameters.
+ */
+std::uint16_t getParamCount();
+
+/**
  * Returns the number of times configSet() was executed successfully.
  * The returned value can only grow (with overflow).
  * This value can be used to reload changed parameter values in the background.
@@ -150,9 +180,49 @@ inline int save()
 }
 
 /**
+ * Erase the non-volatile memory and reset to factory defaults.
+ * @return Non-negative on success, negative errno on failure.
+ */
+inline int erase()
+{
+    return ::configErase();
+}
+
+/**
  * Allows to read/modify/save/restore commands via CLI
  */
 int executeCLICommand(int argc, char *argv[]);
+
+/**
+ * Returns the name of the configuration parameter by index (zero-based).
+ * Returns nullptr if the index exceeds the set of parameters.
+ */
+inline const char* getNameOfParamAtIndex(std::uint16_t index)
+{
+    return ::configNameByIndex(int(index));
+}
+
+/**
+ * This variant is used with the metadata accessor below. Otherwise it's mostly useless.
+ * The underlying type is deduced via some clever magic tricks at runtime.
+ * Observe that the parameters are ordered in the order of their value range, unsigned first.
+ */
+using ParamMetadataPointer = std::variant<
+    Param<bool>*,
+    Param<std::uint8_t >*, Param<std::int8_t >*,
+    Param<std::uint16_t>*, Param<std::int16_t>*,
+    Param<std::uint32_t>*, Param<std::int32_t>*,
+    Param<std::uint64_t>*, Param<std::int64_t>*,
+    Param<float>*
+>;
+
+/**
+ * Returns typed pointer to the parameter metadata.
+ * If name is a nullptr, or the name is not known, returns an empty option.
+ * The fact that the function accepts nullptr allows one to use it with the index-based accessor as follows:
+ *      out = getParamMetadata(getNameOfParamAtIndex(index))
+ */
+std::optional<ParamMetadataPointer> getParamMetadata(const char* name);
 
 }
 }

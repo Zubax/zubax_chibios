@@ -18,117 +18,114 @@
 namespace os
 {
 
-static chibios_rt::Mutex mutex_;
+static bool defaultSink(const std::uint8_t*, std::size_t);
 
-static int writeExpandingCrLf(::BaseChannel* stream, unsigned timeout_msec, const char* str)
+static chibios_rt::Mutex g_mutex;
+static StandardOutputSink g_sink{&defaultSink};
+
+// Sink invocations are guaranteed to be protected by the mutex, so no extra locking is needed.
+static bool defaultSink(const std::uint8_t* const data, const std::size_t sz)
 {
-    const auto timeout = MS2ST(timeout_msec);
-    int ret = 0;
+    return chnWriteTimeout(&STDOUT_SD, data, sz, MS2ST(10)) == sz;
+}
 
-    for (const char* pc = str; *pc != '\0'; pc++)
+static std::size_t writeExpandingCrLf(const char* str)
+{
+    std::size_t ret = 0;
+    const char* end = str;
+
+    while (*str != '\0')
     {
-        if (*pc == '\n')
+        if ((*end == '\n') ||
+            (*end == '\0'))
         {
-            if (MSG_OK != chnPutTimeout(stream, '\r', timeout))
+            if (end != str)
             {
-                break;
+                const std::size_t range = end - str;
+                if (!g_sink(reinterpret_cast<const std::uint8_t*>(str), range))
+                {
+                    break;
+                }
+
+                ret += range;
+                str += range;
             }
-            ret++;
+
+            if (*end == '\n')
+            {
+                if (!g_sink(reinterpret_cast<const std::uint8_t*>("\r\n"), 2))
+                {
+                    break;
+                }
+
+                ret += 2U;
+                str++;
+            }
         }
-        if (MSG_OK != chnPutTimeout(stream, *pc, timeout))
-        {
-            break;
-        }
-        ret++;
+
+        end++;
     }
 
     return ret;
 }
 
-static int genericPrint(::BaseChannel* stream, unsigned timeout_msec, const char* format, va_list vl)
+static std::size_t genericPrint(const char* format, va_list vl)
 {
-    MutexLocker locker(mutex_);
+    MutexLocker locker(g_mutex);
 
     /*
      * Printing the string into the buffer
      */
-    static char buffer[256];
-
-#if defined(OS_USE_CHPRINTF) && OS_USE_CHPRINTF
+    char buffer[256]{};
     MemoryStream ms;
     msObjectInit(&ms, (uint8_t*)buffer, sizeof(buffer), 0);
     ::BaseSequentialStream* chp = (::BaseSequentialStream*)&ms;
     chvprintf(chp, format, vl);
-    chSequentialStreamPut(chp, 0);
-#else
-    using namespace std;
-    vsnprintf(buffer, sizeof(buffer), format, vl);
-#endif
+    buffer[sizeof(buffer) - 1] = 0;     // Paranoid termination
 
     /*
      * Writing the buffer replacing "\n" --> "\r\n"
      */
-    return writeExpandingCrLf(stream, timeout_msec, buffer);
-}
-
-
-// Lowsyslog config is fixed
-static constexpr unsigned LowsyslogWriteTimeoutMSec = 1000;
-
-void lowsyslog(const char* format, ...)
-{
-    va_list vl;
-    va_start(vl, format);
-    genericPrint((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, format, vl);
-    va_end(vl);
+    return writeExpandingCrLf(buffer);
 }
 
 
 void Logger::println(const char* format, ...)
 {
-    MutexLocker locker(mutex_);
+    MutexLocker locker(g_mutex);
 
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, name_);
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, ": ");
+    writeExpandingCrLf(name_);
+    writeExpandingCrLf(": ");
 
     va_list vl;
     va_start(vl, format);
-    genericPrint((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, format, vl);
+    genericPrint(format, vl);
     va_end(vl);
 
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, "\n");
+    writeExpandingCrLf("\n");
 }
 
 void Logger::puts(const char* line)
 {
-    MutexLocker locker(mutex_);
-
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, name_);
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, ": ");
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, line);
-    writeExpandingCrLf((::BaseChannel*)&STDOUT_SD, LowsyslogWriteTimeoutMSec, "\n");
+    MutexLocker locker(g_mutex);
+    writeExpandingCrLf(name_);
+    writeExpandingCrLf(": ");
+    writeExpandingCrLf(line);
+    writeExpandingCrLf("\n");
 }
 
 
-static unsigned stdio_byte_write_timeout_msec_ = DefaultStdIOByteWriteTimeoutMSec;
-static ::BaseChannel* stdio_stream_ = (::BaseChannel*)&STDOUT_SD;
-
-void setStdIOStream(::BaseChannel* stream, unsigned byte_write_timeout_msec)
+void setStandardOutputSink(const StandardOutputSink& sink)
 {
-    MutexLocker locker(mutex_);
-    assert(stream != nullptr);
-    stdio_stream_ = stream;
-    stdio_byte_write_timeout_msec_ = byte_write_timeout_msec;
-}
-
-::BaseChannel* getStdIOStream()
-{
-    return stdio_stream_;
-}
-
-chibios_rt::Mutex& getStdIOMutex()
-{
-    return mutex_;
+    MutexLocker locker(g_mutex);
+    if (sink)
+    {
+        g_sink = sink;
+    }
+    else
+    {
+        g_sink = defaultSink;
+    }
 }
 
 } // namespace os
@@ -142,21 +139,21 @@ int printf(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
-    int ret = genericPrint(stdio_stream_, stdio_byte_write_timeout_msec_, format, vl);
+    int ret = int(genericPrint(format, vl));
     va_end(vl);
     return ret;
 }
 
 int vprintf(const char* format, va_list vl)
 {
-    return genericPrint(stdio_stream_, stdio_byte_write_timeout_msec_, format, vl);
+    return int(genericPrint(format, vl));
 }
 
 int puts(const char* str)
 {
-    MutexLocker locker(mutex_);
-    int ret = writeExpandingCrLf(stdio_stream_, stdio_byte_write_timeout_msec_, str);
-    ret += writeExpandingCrLf(stdio_stream_, stdio_byte_write_timeout_msec_, "\n");
+    MutexLocker locker(g_mutex);
+    int ret = int(writeExpandingCrLf(str));
+    ret += int(writeExpandingCrLf("\n"));
     return ret;
 }
 
