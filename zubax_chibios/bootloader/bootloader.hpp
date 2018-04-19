@@ -7,6 +7,7 @@
 #pragma once
 
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/helpers.hpp>
 #include <cstdint>
 #include <utility>
 #include <array>
@@ -14,6 +15,8 @@
 #include "util.hpp"
 
 
+namespace os
+{
 namespace bootloader
 {
 /**
@@ -22,11 +25,11 @@ namespace bootloader
  */
 enum class State
 {
-    NoAppToBoot,         //!< NoAppToBoot
-    BootDelay,           //!< BootDelay
-    BootCancelled,       //!< BootCancelled
-    AppUpgradeInProgress,//!< AppUpgradeInProgress
-    ReadyToBoot,         //!< ReadyToBoot
+    NoAppToBoot,
+    BootDelay,
+    BootCancelled,
+    AppUpgradeInProgress,
+    ReadyToBoot
 };
 
 static inline const char* stateToString(State state)
@@ -60,6 +63,10 @@ struct __attribute__((packed)) AppInfo
  *  1. beginUpgrade()
  *  2. write() repeated until finished.
  *  3. endUpgrade(success or not)
+ *
+ * Please note that the performance of the ROM reading routine is critical.
+ * Slow access may lead to watchdog timeouts (assuming that the watchdog is used),
+ * disruption of communications, and premature expiration of the boot timeout.
  */
 class IAppStorageBackend
 {
@@ -84,7 +91,7 @@ public:
     /**
      * @return number of bytes read; negative on error
      */
-    virtual int read(std::size_t offset, void* data, std::size_t size) = 0;
+    virtual int read(std::size_t offset, void* data, std::size_t size) const = 0;
 };
 
 /**
@@ -120,24 +127,34 @@ public:
 
 /**
  * Main bootloader controller.
+ * Beware that this class has a large buffer field used to cache ROM reads. Do not allocate it on the stack.
  */
 class Bootloader
 {
-    static constexpr unsigned DefaultBootDelayMSec = 3000;
+    static constexpr unsigned DefaultBootDelayMSec = 5000;
 
     State state_;
     IAppStorageBackend& backend_;
 
+    const std::uint32_t max_application_image_size_;
     const unsigned boot_delay_msec_;
     ::systime_t boot_delay_started_at_st_;
 
+    std::uint8_t rom_buffer_[1024];             ///< Larger buffer enables faster CRC verification, which is important
+
     chibios_rt::Mutex mutex_;
+
+    /// Caching is needed because app check can sometimes take a very long time (several seconds)
+    os::helpers::LazyConstructor<AppInfo> cached_app_info_;
 
     /**
      * Refer to the Brickproof Bootloader specs.
+     * Note that the structure must be aligned at 8 bytes boundary, and the image must be padded to 8 bytes!
      */
     struct __attribute__((packed)) AppDescriptor
     {
+        static constexpr unsigned ImagePaddingBytes = 8;
+
         std::array<std::uint8_t, 8> signature;
         AppInfo app_info;
         std::array<std::uint8_t, 6> reserved;
@@ -147,24 +164,35 @@ class Bootloader
             return {'A','P','D','e','s','c','0','0'};
         }
 
-        bool isValid() const
+        bool isValid(const std::uint32_t max_application_image_size) const
         {
             const auto sgn = getSignatureValue();
             return std::equal(std::begin(signature), std::end(signature), std::begin(sgn)) &&
-                   (app_info.image_size > 0) && (app_info.image_size < 0xFFFFFFFFU);
+                   (app_info.image_size > 0) &&
+                   (app_info.image_size <= max_application_image_size) &&
+                   ((app_info.image_size % ImagePaddingBytes) == 0);
         }
     };
     static_assert(sizeof(AppDescriptor) == 32, "Invalid packing");
 
     std::pair<AppDescriptor, bool> locateAppDescriptor();
 
-    void verifyAppAndUpdateState();
+    void verifyAppAndUpdateState(const State state_on_success);
 
 public:
     /**
      * Time since boot will be measured starting from the moment when the object was constructed.
+     *
+     * The max application image size parameter is very important for performance reasons;
+     * without it, the bootloader may encounter an unrelated data structure in the ROM that looks like a
+     * valid app descriptor (by virtue of having the same signature, which is only 64 bit long),
+     * and it may spend a considerable amount of time trying to check the CRC that is certainly invalid.
+     * Having an upper size limit for the application image allows the bootloader to weed out too large
+     * values early, greatly improving robustness.
      */
-    Bootloader(IAppStorageBackend& backend, unsigned boot_delay_msec = DefaultBootDelayMSec);
+    Bootloader(IAppStorageBackend& backend,
+               std::uint32_t max_application_image_size = 0xFFFFFFFFU,
+               unsigned boot_delay_msec = DefaultBootDelayMSec);
 
     /**
      * @ref State.
@@ -194,4 +222,5 @@ public:
     int upgradeApp(IDownloader& downloader);
 };
 
+}
 }

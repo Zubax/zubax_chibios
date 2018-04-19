@@ -2,6 +2,7 @@
 
 if ! which sz > /dev/null; then
     echo "Command 'sz' is not available; please install it and try again."
+    echo "On Debian-based systems, use package 'lrzsz'."
     exit 1
 fi
 
@@ -20,8 +21,6 @@ if [[ $file == "" ]]; then
     exit 1
 fi
 
-set -e
-
 function detect_port()
 {
     if [[ $device_uid_or_port_name == /* ]]; then
@@ -31,7 +30,7 @@ function detect_port()
     fi
 
     num_matching_ports=`echo $matching_ports | wc -l`
-    if [[ $num_matching_ports < 1 ]]; then
+    if [ -z "$matching_ports" ] || [[ $num_matching_ports < 1 ]]; then
         echo "Could not find matching serial port."
         exit 1
     fi
@@ -46,6 +45,7 @@ function detect_port()
 }
 
 # Configuring the serial port
+echo "Configuring the serial port..."
 detect_port
 stty -F $port 115200
 
@@ -56,6 +56,8 @@ sleep 3
 
 # Re-detecting the serial port, because if it is a USB CDC ACM port, it will re-appear, likely under a different name
 detect_port
+
+set -e
 
 # Telling the bootloader to receive the new firmware image
 echo -e "\rwait\r" > $port

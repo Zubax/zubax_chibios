@@ -98,9 +98,12 @@ class AppDescriptor(object):
 
 
 class FirmwareImage(object):
+    # Large padding may allow for faster CRC verification
+    PADDING = 8
+    
     def __init__(self, path, mode="r"):
         self._file = open(path, (mode + "b").replace("bb", "b"))
-        self._padding = 4
+        self._padding = self.PADDING
 
         if "r" in mode:
             self._contents = BytesIO(self._file.read())
@@ -135,23 +138,20 @@ class FirmwareImage(object):
         self._file.close()
 
     def _write_descriptor_raw(self):
-        # Seek to the appropriate location, write the serialized
-        # descriptor, and seek back.
+        # Seek to the appropriate location, write the serialized descriptor, and seek back.
         prev_offset = self._contents.tell()
         self._contents.seek(self._descriptor_offset)
         self._contents.write(self._descriptor.pack())
         self._contents.seek(prev_offset)
 
     def write_descriptor(self):
-        # Set the descriptor's length and CRC to the values required for
-        # CRC computation
+        # Set the descriptor's length and CRC to the values required for CRC computation
         self.app_descriptor.image_size = self.length
         self.app_descriptor.image_crc = 0
 
         self._write_descriptor_raw()
 
-        # Update the descriptor's CRC based on the computed value and write
-        # it out again
+        # Update the descriptor's CRC based on the computed value and write it out again
         self.app_descriptor.image_crc = self.crc
 
         self._write_descriptor_raw()
@@ -161,8 +161,7 @@ class FirmwareImage(object):
         MASK = 0xFFFFFFFFFFFFFFFF
         POLY = 0x42F0E1EBA9EA3693
 
-        # Calculate the image CRC with the image_crc field in the app
-        # descriptor zeroed out.
+        # Calculate the image CRC with the image_crc field in the app descriptor zeroed out.
         crc_offset = self.app_descriptor_offset + len(AppDescriptor.SIGNATURE)
         content = bytearray(self._contents.getvalue())
         content[crc_offset:crc_offset + 8] = bytearray(b"\x00" * 8)
@@ -182,16 +181,14 @@ class FirmwareImage(object):
     @property
     def length(self):
         if not self._length:
-            # Find the length of the file by seeking to the end and getting
-            # the offset
+            # Find the length of the file by seeking to the end and getting the offset
             prev_offset = self._contents.tell()
             self._contents.seek(0, os.SEEK_END)
             self._length = self._contents.tell()
             if self._padding:
-                fill = self._padding - (self._length % self._padding)
-                if fill:
-                    self._length += fill
-                self._padding = fill
+                mod = self._length % self._padding
+                self._padding = self._padding - mod if mod else 0
+                self._length += self._padding
             self._contents.seek(prev_offset)
 
         return self._length
@@ -201,14 +198,13 @@ class FirmwareImage(object):
         if not self._descriptor_offset:
             # Save the current position
             prev_offset = self._contents.tell()
-            # Check each byte in the file to see if a valid descriptor starts
-            # at that location. Slow, but not slow enough to matter.
+            # Check each byte in the file to see if a valid descriptor starts at that location.
+            # Slow, but not slow enough to matter.
             offset = 0
             while offset < self.length - AppDescriptor.LENGTH:
                 self._contents.seek(offset)
                 try:
-                    # If this throws an exception, there isn't a valid
-                    # descriptor at this offset
+                    # If this throws an exception, there isn't a valid descriptor at this offset
                     AppDescriptor(self._contents.read(AppDescriptor.LENGTH))
                 except Exception:
                     offset += 1

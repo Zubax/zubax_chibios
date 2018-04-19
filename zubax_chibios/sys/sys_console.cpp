@@ -26,7 +26,7 @@ static StandardOutputSink g_sink{&defaultSink};
 // Sink invocations are guaranteed to be protected by the mutex, so no extra locking is needed.
 static bool defaultSink(const std::uint8_t* const data, const std::size_t sz)
 {
-    return chnWriteTimeout(&STDOUT_SD, data, sz, MS2ST(10)) == sz;
+    return chnWriteTimeout(&STDOUT_SD, data, sz, TIME_MS2I(10)) == sz;
 }
 
 static std::size_t writeExpandingCrLf(const char* str)

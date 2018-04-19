@@ -24,7 +24,7 @@
 #  define STRINGIZE(x)          STRINGIZE2(x)
 #endif
 
-#if defined(DEBUG_BUILD) && DEBUG_BUILD
+#if (defined(DEBUG_BUILD) && DEBUG_BUILD) || !(defined(AGGRESSIVE_SIZE_OPTIMIZATION) && AGGRESSIVE_SIZE_OPTIMIZATION)
 # define MAKE_ASSERT_MSG_(x)      (__FILE__ ":" STRINGIZE(__LINE__) ":" STRINGIZE(x))
 #else
 # define MAKE_ASSERT_MSG_(x)      (STRINGIZE(__LINE__))

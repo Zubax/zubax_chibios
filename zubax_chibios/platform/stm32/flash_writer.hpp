@@ -73,7 +73,11 @@ class FlashWriter
         }
     };
 
-    /// Returns negative if there's no match
+    /**
+     * This function maps an arbitrary address onto a flash sector number.
+     * It need not be implemented for MCU which do not require sector numbers for operations on flash.
+     * Returns negative if there's no match.
+     */
     static int mapAddressToSectorNumber(const std::size_t where)
     {
         if (where < 0x08000000)
@@ -83,16 +87,16 @@ class FlashWriter
 
 #if defined(STM32F446xx)
         // 16K
-        if (where < 0x08003FFF) { return 0; }
-        if (where < 0x08007FFF) { return 1; }
-        if (where < 0x0800BFFF) { return 2; }
-        if (where < 0x0800FFFF) { return 3; }
+        if (where <= 0x08003FFF) { return 0; }
+        if (where <= 0x08007FFF) { return 1; }
+        if (where <= 0x0800BFFF) { return 2; }
+        if (where <= 0x0800FFFF) { return 3; }
         // 64K
-        if (where < 0x0801FFFF) { return 4; }
+        if (where <= 0x0801FFFF) { return 4; }
         // 128K
-        if (where < 0x0803FFFF) { return 5; }
-        if (where < 0x0805FFFF) { return 6; }
-        if (where < 0x0807FFFF) { return 7; }
+        if (where <= 0x0803FFFF) { return 5; }
+        if (where <= 0x0805FFFF) { return 6; }
+        if (where <= 0x0807FFFF) { return 7; }
 #else
         assert(false);
 #endif
@@ -150,18 +154,34 @@ public:
                const std::size_t how_much)
     {
 #if defined(FLASH_CR_PER)
-        constexpr unsigned SmallestPageSize = 512;
-
-        for (std::size_t location = reinterpret_cast<std::size_t>(where);
-             location < (reinterpret_cast<std::size_t>(where) + how_much);
-             location += SmallestPageSize)
+        for (std::size_t blank_check_pos = reinterpret_cast<std::size_t>(where);
+            blank_check_pos < (reinterpret_cast<std::size_t>(where) + how_much);
+            blank_check_pos++)
         {
-            Prologuer prologuer;
-            FLASH->CR = FLASH_CR_PER;
-            FLASH->AR = page_address;
-            FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
-            waitReady();
-            FLASH->CR = 0;
+            if (*reinterpret_cast<const std::uint8_t*>(blank_check_pos) != 0xFF)
+            {
+                DEBUG_LOG("Erasing page @ %x... ", blank_check_pos);
+
+                // Erase operation
+                {
+                    Prologuer prologuer;
+                    FLASH->CR = FLASH_CR_PER;
+                    FLASH->AR = blank_check_pos;
+                    FLASH->CR = FLASH_CR_PER | FLASH_CR_STRT;
+                    waitReady();
+                    FLASH->CR = 0;
+                }
+
+                // Immediate blank check
+                if (*reinterpret_cast<const std::uint8_t*>(blank_check_pos) != 0xFF)
+                {
+                    // Interrupt immediately, otherwise we'll be stuck here erasing each byte unsuccessfully
+                    DEBUG_LOG("Page erase FAILED\n");
+                    return false;
+                }
+
+                DEBUG_LOG("Page erase OK\n");
+            }
         }
 #else
         constexpr unsigned SmallestSectorSize = 1024;
@@ -192,7 +212,6 @@ public:
         }
 #endif
 
-        DEBUG_LOG("Erased %u B @ 0x%08x\n", unsigned(how_much), reinterpret_cast<unsigned>(where));
         return std::all_of(reinterpret_cast<const std::uint8_t*>(where),
                            reinterpret_cast<const std::uint8_t*>(where) + how_much,
                            [](std::uint8_t x) { return x == 0xFF; });

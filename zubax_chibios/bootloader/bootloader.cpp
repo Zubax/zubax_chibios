@@ -8,11 +8,56 @@
 #include <ch.hpp>
 
 
+namespace os
+{
 namespace bootloader
 {
-/*
- * Bootloader
+namespace
+{
+/**
+ * A proxy that streams the data from the downloader into the application storage.
+ * Note that every access to the storage backend is protected with the mutex!
  */
+class Sink : public IDownloadStreamSink
+{
+    IAppStorageBackend& backend_;
+    chibios_rt::Mutex& mutex_;
+    const std::size_t max_image_size_;
+    std::size_t offset_ = 0;
+
+    int handleNextDataChunk(const void* data, std::size_t size) override
+    {
+        os::MutexLocker mlock(mutex_);
+
+        if ((offset_ + size) <= max_image_size_)
+        {
+            int res = backend_.write(offset_, data, size);
+            if ((res >= 0) && (res != int(size)))
+            {
+                return -ErrAppStorageWriteFailure;
+            }
+
+            offset_ += size;
+            return res;
+        }
+        else
+        {
+            return -ErrAppImageTooLarge;
+        }
+    }
+
+public:
+    Sink(IAppStorageBackend& back,
+         chibios_rt::Mutex& mutex,
+         std::size_t max_image_size) :
+        backend_(back),
+        mutex_(mutex),
+        max_image_size_(max_image_size)
+    { }
+};
+
+}
+
 std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
 {
     constexpr auto Step = 8;
@@ -42,33 +87,54 @@ std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
             {
                 break;
             }
-            if (!desc.isValid())
+            if (!desc.isValid(max_application_image_size_))
             {
                 continue;
             }
         }
 
-        // Checking firmware CRC
+        // Checking firmware CRC.
+        // This block is very computationally intensive, so it has been carefully optimized for speed.
         {
-            constexpr auto WordSize = 4;
-            const auto crc_offset_in_words = (offset + offsetof(AppDescriptor, app_info.image_crc)) / WordSize;
-            const auto image_size_in_words = desc.app_info.image_size / WordSize;
-
+            const auto crc_offset = offset + offsetof(AppDescriptor, app_info.image_crc);
             CRC64WE crc;
 
-            for (unsigned i = 0; i < image_size_in_words; i++)
+            // Read large chunks until the CRC field is reached (in most cases it will fit in just one chunk)
+            for (std::size_t i = 0; i < crc_offset;)
             {
-                std::uint32_t word = 0;
-                if ((i != crc_offset_in_words) && (i != (crc_offset_in_words + 1)))
+                const int res = backend_.read(i, rom_buffer_,
+                                              std::min<std::size_t>(sizeof(rom_buffer_), crc_offset - i));
+                if LIKELY(res > 0)
                 {
-                    int res = backend_.read(i * WordSize, &word, WordSize);
-                    if (res != WordSize)
-                    {
-                        continue;
-                    }
+                    i += res;
+                    crc.add(rom_buffer_, res);
                 }
+                else
+                {
+                    break;
+                }
+            }
 
-                crc.add(&word, WordSize);
+            // Fill CRC with zero
+            {
+                static const std::uint8_t dummy[8]{0};
+                crc.add(&dummy[0], sizeof(dummy));
+            }
+
+            // Read the rest of the image in large chunks
+            for (std::size_t i = crc_offset + 8; i < desc.app_info.image_size;)
+            {
+                const int res = backend_.read(i, rom_buffer_,
+                                              std::min<std::size_t>(sizeof(rom_buffer_), desc.app_info.image_size - i));
+                if LIKELY(res > 0)
+                {
+                    i += res;
+                    crc.add(rom_buffer_, res);
+                }
+                else
+                {
+                    break;
+                }
             }
 
             if (crc.get() != desc.app_info.image_crc)
@@ -86,39 +152,49 @@ std::pair<Bootloader::AppDescriptor, bool> Bootloader::locateAppDescriptor()
     return {AppDescriptor(), false};
 }
 
-void Bootloader::verifyAppAndUpdateState()
+void Bootloader::verifyAppAndUpdateState(const State state_on_success)
 {
     const auto appdesc_result = locateAppDescriptor();
+
     if (appdesc_result.second)
     {
+        cached_app_info_.construct(appdesc_result.first.app_info);
+        state_ = state_on_success;
+
+        boot_delay_started_at_st_ = chVTGetSystemTime();        // This only makes sense if the new state is BootDelay
+
         DEBUG_LOG("App found; version %d.%d.%x, %d bytes\n",
                   appdesc_result.first.app_info.major_version,
                   appdesc_result.first.app_info.minor_version,
                   unsigned(appdesc_result.first.app_info.vcs_commit),
                   unsigned(appdesc_result.first.app_info.image_size));
-        state_ = State::BootDelay;
-        boot_delay_started_at_st_ = chVTGetSystemTime();
     }
     else
     {
-        DEBUG_LOG("App not found\n");
+        cached_app_info_.destroy();
         state_ = State::NoAppToBoot;
+
+        DEBUG_LOG("App not found\n");
     }
 }
 
-Bootloader::Bootloader(IAppStorageBackend& backend, unsigned boot_delay_msec) :
+Bootloader::Bootloader(IAppStorageBackend& backend,
+                       std::uint32_t max_application_image_size,
+                       unsigned boot_delay_msec) :
     backend_(backend),
+    max_application_image_size_(max_application_image_size),
     boot_delay_msec_(boot_delay_msec)
 {
     os::MutexLocker mlock(mutex_);
-    verifyAppAndUpdateState();
+    verifyAppAndUpdateState(State::BootDelay);
 }
 
 State Bootloader::getState()
 {
     os::MutexLocker mlock(mutex_);
 
-    if ((state_ == State::BootDelay) && (chVTTimeElapsedSinceX(boot_delay_started_at_st_) >= MS2ST(boot_delay_msec_)))
+    if ((state_ == State::BootDelay) &&
+        (chVTTimeElapsedSinceX(boot_delay_started_at_st_) >= MS2ST(boot_delay_msec_)))
     {
         DEBUG_LOG("Boot delay expired\n");
         state_ = State::ReadyToBoot;
@@ -130,8 +206,15 @@ State Bootloader::getState()
 std::pair<AppInfo, bool> Bootloader::getAppInfo()
 {
     os::MutexLocker mlock(mutex_);
-    const auto res = locateAppDescriptor();
-    return {res.first.app_info, res.second};
+
+    if (cached_app_info_.isConstructed())
+    {
+        return {*cached_app_info_, true};
+    }
+    else
+    {
+        return {AppInfo(), false};
+    }
 }
 
 void Bootloader::cancelBoot()
@@ -193,8 +276,7 @@ int Bootloader::upgradeApp(IDownloader& downloader)
         case State::BootCancelled:
         case State::NoAppToBoot:
         {
-            state_ = State::AppUpgradeInProgress;
-            break;
+            break;      // OK, continuing below
         }
         case State::ReadyToBoot:
         case State::AppUpgradeInProgress:
@@ -203,9 +285,13 @@ int Bootloader::upgradeApp(IDownloader& downloader)
         }
         }
 
+        state_ = State::AppUpgradeInProgress;
+        cached_app_info_.destroy();                             // Invalidate now, as we're going to modify the storage
+
         int res = backend_.beginUpgrade();
         if (res < 0)
         {
+            verifyAppAndUpdateState(State::BootCancelled);      // The backend could have modified the storage
             return res;
         }
     }
@@ -215,28 +301,9 @@ int Bootloader::upgradeApp(IDownloader& downloader)
     /*
      * Downloading stage.
      * New application is downloaded into the storage backend via the Sink proxy class.
-     * Every write() is mutex-protected.
+     * Every write() via the Sink is mutex-protected.
      */
-    class Sink : public IDownloadStreamSink
-    {
-        std::size_t offset_ = 0;
-        IAppStorageBackend& backend_;
-        chibios_rt::Mutex& mutex_;
-
-        int handleNextDataChunk(const void* data, std::size_t size) override
-        {
-            os::MutexLocker mlock(mutex_);
-            int res = backend_.write(offset_, data, size);
-            offset_ += size;
-            return res;
-        }
-
-    public:
-        Sink(IAppStorageBackend& back, chibios_rt::Mutex& mutex) :
-            backend_(back),
-            mutex_(mutex)
-        { }
-    } sink(backend_, mutex_);
+    Sink sink(backend_, mutex_, max_application_image_size_);
 
     int res = downloader.download(sink);
     DEBUG_LOG("App download finished with status %d\n", res);
@@ -254,6 +321,7 @@ int Bootloader::upgradeApp(IDownloader& downloader)
     if (res < 0)                                // Download failed
     {
         (void)backend_.endUpgrade(false);       // Making sure the backend is finalized; error is irrelevant
+        verifyAppAndUpdateState(State::BootCancelled);
         return res;
     }
 
@@ -261,6 +329,7 @@ int Bootloader::upgradeApp(IDownloader& downloader)
     if (res < 0)                                // Finalization failed
     {
         DEBUG_LOG("App storage backend finalization failed (%d)\n", res);
+        verifyAppAndUpdateState(State::BootCancelled);
         return res;
     }
 
@@ -269,9 +338,10 @@ int Bootloader::upgradeApp(IDownloader& downloader)
      * This method will report success even if the application image it just downloaded is not valid,
      * since that would be out of the scope of its responsibility.
      */
-    verifyAppAndUpdateState();
+    verifyAppAndUpdateState(State::BootDelay);
 
     return ErrOK;
 }
 
+}
 }

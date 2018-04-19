@@ -6,7 +6,6 @@
 
 ZUBAX_CHIBIOS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-# TODO: make configs optional too
 CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/libstdcpp.cpp                  \
           $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys_console.cpp                \
           $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/sys/sys.cpp
@@ -49,7 +48,7 @@ endif
 
 UDEFS += -DSTDOUT_SD=SD$(SERIAL_CLI_PORT_NUMBER) -DSTDIN_SD=STDOUT_SD -DSERIAL_CLI_PORT_NUMBER=$(SERIAL_CLI_PORT_NUMBER)
 
-UDEFS += -DCORTEX_ENABLE_WFI_IDLE=1 -DCHPRINTF_USE_FLOAT=1
+UDEFS += -DCORTEX_ENABLE_WFI_IDLE=1
 
 USE_LINK_GC = yes
 USE_THUMB ?= yes
@@ -96,7 +95,7 @@ endif
 NO_BUILTIN += -fno-builtin-printf -fno-builtin-fprintf  -fno-builtin-vprintf -fno-builtin-vfprintf -fno-builtin-puts
 
 USE_OPT += -falign-functions=16 -U__STRICT_ANSI__ -fno-exceptions -fno-unwind-tables -fno-stack-protector \
-           $(NO_BUILTIN) -fconserve-stack
+           $(NO_BUILTIN)
 
 # Explicit usage flags are needed for LTO:
 USE_OPT += -u_port_lock -u_port_unlock -u_exit -u_kill -u_getpid -uchThdExit -u__errno

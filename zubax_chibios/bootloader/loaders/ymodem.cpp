@@ -15,6 +15,8 @@
 #undef CAN
 #endif
 
+namespace os
+{
 namespace bootloader
 {
 namespace ymodem_loader
@@ -50,10 +52,20 @@ std::uint8_t YModemReceiver::computeChecksum(const void* data, unsigned size)
     return std::accumulate(p, p + size, 0);
 }
 
+void YModemReceiver::kickTheDog()
+{
+    if (watchdog_reference_ != nullptr)
+    {
+        watchdog_reference_->reset();
+    }
+}
+
 int YModemReceiver::send(std::uint8_t byte)
 {
     DEBUG_LOG("YMODEM TX 0x%x\n", byte);
+    kickTheDog();
     int res = chnPutTimeout(channel_, byte, MS2ST(SendTimeoutMSec));
+    kickTheDog();
     if (res != STM_OK)
     {
         if (res > 0)    // Making sure the error code is inverted
@@ -71,15 +83,50 @@ int YModemReceiver::receive(void* data, unsigned size, unsigned timeout_msec)
      * The spec says:
      *          Once into a receiving a block, the receiver goes into a one-second timeout
      *          for each character and the checksum.
-     * This timeout logic is not compliant, as it imposes the same overall timeout for entire block. Who cares anyway.
      */
-    return chnReadTimeout(channel_, static_cast<std::uint8_t*>(data), size, MS2ST(timeout_msec));
+    constexpr unsigned CharTimeoutMSec = 1000;
+
+    std::uint8_t* ui8 = static_cast<std::uint8_t*>(data);
+
+    for (unsigned i = 0; i < size; i++)
+    {
+        kickTheDog();
+        const int res = chnGetTimeout(channel_, MS2ST(CharTimeoutMSec));
+        kickTheDog();
+
+        if (res == STM_TIMEOUT)
+        {
+            /*
+             * Note that we may greatly overstay the timeout here, but this is by design,
+             * since the spec requires that each character must be received with 1 second timeout.
+             */
+            if (timeout_msec <= CharTimeoutMSec)
+            {
+                return i;
+            }
+            else
+            {
+                timeout_msec -= CharTimeoutMSec;
+            }
+        }
+        else if (res < 0)
+        {
+            return res;
+        }
+        else
+        {
+            *ui8++ = std::uint8_t(res);
+        }
+    }
+
+    return size;
 }
 
 void YModemReceiver::flushReadQueue()
 {
     for (;;)
     {
+        kickTheDog();
         const auto x = chnGetTimeout(channel_, MS2ST(1));
         if (x < 0)
         {
@@ -245,6 +292,8 @@ int YModemReceiver::processDownloadedBlock(IDownloadStreamSink& sink, void* data
 
 int YModemReceiver::download(IDownloadStreamSink& sink)
 {
+    kickTheDog();
+
     // This thing will make sure there's no residual garbage in the RX buffer afterwards
     struct Flusher
     {
@@ -271,6 +320,7 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
     const auto started_at_st = chVTGetSystemTime();
     for (;;)
     {
+        kickTheDog();
         DEBUG_LOG("Trying to initiate X/YMODEM transfer...\n");
 
         // Abort if we couldn't get it going in InitialTimeoutMSec
@@ -381,6 +431,8 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
     unsigned remaining_retries = MaxRetries;
     for (;;)
     {
+        kickTheDog();
+
         // Limiting retries
         if (remaining_retries <= 0)
         {
@@ -495,8 +547,10 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
         abort();
     }
 
+    kickTheDog();
     return ErrOK;
 }
 
+}
 }
 }
