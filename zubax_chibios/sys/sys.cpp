@@ -179,6 +179,17 @@ void zchSysHaltHook(const char* msg)
 #endif
 }
 
+/**
+ * Overrides the weak handler defined in the OS.
+ * This is required because the weak handler doesn't halt the OS, which is very dangerous!
+ * More context: http://www.chibios.com/forum/viewtopic.php?f=35&t=3819&p=28555#p28555
+ */
+void _unhandled_exception()
+{
+    chSysHalt("UNDEFINED IRQ");
+}
+
+
 void __assert_func(const char* file, int line, const char* func, const char* expr)
 {
     port_disable();
