@@ -79,7 +79,7 @@ private:
     I2CPin sda_;
     bool started_ = false;
     const std::function<void ()> delay_;
-    const std::uint32_t clock_stretch_timeout_ticks_;
+    const std::uint64_t clock_stretch_timeout_ticks_;
 
     bool sclWait() const
     {
@@ -253,7 +253,7 @@ public:
         scl_(scl_port, scl_pin),
         sda_(sda_port, sda_pin),
         delay_(arg_cycle_delay),
-        clock_stretch_timeout_ticks_(US2ST(
+        clock_stretch_timeout_ticks_(TIME_US2I(
             std::chrono::duration_cast<std::chrono::microseconds>(arg_clock_stretch_timeout).count()))
     {
         assert(delay_);
