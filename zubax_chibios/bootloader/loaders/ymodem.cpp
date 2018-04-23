@@ -49,7 +49,7 @@ int YModemReceiver::sendResultToErrorCode(int res)
 std::uint8_t YModemReceiver::computeChecksum(const void* data, unsigned size)
 {
     auto p = static_cast<const std::uint8_t*>(data);
-    return std::accumulate(p, p + size, 0);
+    return std::uint8_t(std::accumulate(p, p + size, 0));
 }
 
 void YModemReceiver::kickTheDog()
@@ -64,7 +64,7 @@ int YModemReceiver::send(std::uint8_t byte)
 {
     DEBUG_LOG("YMODEM TX 0x%x\n", byte);
     kickTheDog();
-    int res = chnPutTimeout(channel_, byte, MS2ST(SendTimeoutMSec));
+    int res = chnPutTimeout(channel_, byte, TIME_MS2I(SendTimeoutMSec));
     kickTheDog();
     if (res != STM_OK)
     {
@@ -91,7 +91,7 @@ int YModemReceiver::receive(void* data, unsigned size, unsigned timeout_msec)
     for (unsigned i = 0; i < size; i++)
     {
         kickTheDog();
-        const int res = chnGetTimeout(channel_, MS2ST(CharTimeoutMSec));
+        const int res = chnGetTimeout(channel_, TIME_MS2I(CharTimeoutMSec));
         kickTheDog();
 
         if (res == STM_TIMEOUT)
@@ -127,7 +127,7 @@ void YModemReceiver::flushReadQueue()
     for (;;)
     {
         kickTheDog();
-        const auto x = chnGetTimeout(channel_, MS2ST(1));
+        const auto x = chnGetTimeout(channel_, TIME_MS2I(1));
         if (x < 0)
         {
             break;
@@ -324,7 +324,7 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
         DEBUG_LOG("Trying to initiate X/YMODEM transfer...\n");
 
         // Abort if we couldn't get it going in InitialTimeoutMSec
-        if (chVTTimeElapsedSinceX(started_at_st) > MS2ST(InitialTimeoutMSec))
+        if (chVTTimeElapsedSinceX(started_at_st) > TIME_MS2I(InitialTimeoutMSec))
         {
             abort();
             return -ErrRetriesExhausted;
@@ -418,7 +418,7 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
         }
 
         // Done!
-        expected_sequence_id += 1;
+        expected_sequence_id = std::uint8_t(expected_sequence_id + 1);
         break;
     }
 
@@ -503,7 +503,7 @@ int YModemReceiver::download(IDownloadStreamSink& sink)
             abort();
             return -ErrProtocolError;
         }
-        expected_sequence_id += 1;
+        expected_sequence_id = std::uint8_t(expected_sequence_id + 1);
 
         // Making sure we're not past the end of file
         if (file_size_known)

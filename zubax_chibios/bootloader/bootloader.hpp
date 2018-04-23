@@ -12,6 +12,7 @@
 #include <utility>
 #include <array>
 #include <cassert>
+#include <optional>
 #include "util.hpp"
 
 
@@ -145,7 +146,7 @@ class Bootloader
     chibios_rt::Mutex mutex_;
 
     /// Caching is needed because app check can sometimes take a very long time (several seconds)
-    os::helpers::LazyConstructor<AppInfo> cached_app_info_;
+    std::optional<AppInfo> cached_app_info_;
 
     /**
      * Refer to the Brickproof Bootloader specs.

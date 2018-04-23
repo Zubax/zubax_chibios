@@ -158,7 +158,7 @@ void Bootloader::verifyAppAndUpdateState(const State state_on_success)
 
     if (appdesc_result.second)
     {
-        cached_app_info_.construct(appdesc_result.first.app_info);
+        cached_app_info_ = appdesc_result.first.app_info;
         state_ = state_on_success;
 
         boot_delay_started_at_st_ = chVTGetSystemTime();        // This only makes sense if the new state is BootDelay
@@ -171,7 +171,7 @@ void Bootloader::verifyAppAndUpdateState(const State state_on_success)
     }
     else
     {
-        cached_app_info_.destroy();
+        cached_app_info_.reset();
         state_ = State::NoAppToBoot;
 
         DEBUG_LOG("App not found\n");
@@ -194,7 +194,7 @@ State Bootloader::getState()
     os::MutexLocker mlock(mutex_);
 
     if ((state_ == State::BootDelay) &&
-        (chVTTimeElapsedSinceX(boot_delay_started_at_st_) >= MS2ST(boot_delay_msec_)))
+        (chVTTimeElapsedSinceX(boot_delay_started_at_st_) >= TIME_MS2I(boot_delay_msec_)))
     {
         DEBUG_LOG("Boot delay expired\n");
         state_ = State::ReadyToBoot;
@@ -207,7 +207,7 @@ std::pair<AppInfo, bool> Bootloader::getAppInfo()
 {
     os::MutexLocker mlock(mutex_);
 
-    if (cached_app_info_.isConstructed())
+    if (cached_app_info_)
     {
         return {*cached_app_info_, true};
     }
@@ -286,7 +286,7 @@ int Bootloader::upgradeApp(IDownloader& downloader)
         }
 
         state_ = State::AppUpgradeInProgress;
-        cached_app_info_.destroy();                             // Invalidate now, as we're going to modify the storage
+        cached_app_info_.reset();                               // Invalidate now, as we're going to modify the storage
 
         int res = backend_.beginUpgrade();
         if (res < 0)
