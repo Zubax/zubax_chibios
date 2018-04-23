@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Zubax Robotics, zubax.com
+ * Copyright (c) 2017-2018 Zubax Robotics, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
