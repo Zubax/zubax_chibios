@@ -20,8 +20,7 @@ UDEFS +=
 
 BUILD_CONFIG ?= 0
 ifneq ($(BUILD_CONFIG),0)
-    CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config.cpp              \
-              $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config_cli.cpp
+    CPPSRC += $(ZUBAX_CHIBIOS_DIR)/zubax_chibios/config/config.cpp
 endif
 
 #
