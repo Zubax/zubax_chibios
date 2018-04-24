@@ -189,11 +189,6 @@ inline int erase()
 }
 
 /**
- * Allows to read/modify/save/restore commands via CLI
- */
-int executeCLICommand(int argc, char *argv[]);
-
-/**
  * Returns the name of the configuration parameter by index (zero-based).
  * Returns nullptr if the index exceeds the set of parameters.
  */

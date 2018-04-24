@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Zubax Robotics, zubax.com
+ * Copyright (c) 2017-2018 Zubax Robotics, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
@@ -8,14 +8,15 @@
 
 #include "../bootloader.hpp"
 #include <zubax_chibios/os.hpp>
-#include <zubax_chibios/util/heapless.hpp>
 #include <zubax_chibios/watchdog/watchdog.hpp>
 #include <cstdint>
 #include <cstdlib>
 #include <array>
 #include <utility>
 #include <cstddef>
+#include <chrono>
 #include <canard.h>                     // This loader requires libcanard
+#include <senoval/string.hpp>           // And Senoval as well
 #include <unistd.h>
 #include <hal.h>
 
@@ -95,7 +96,7 @@ public:
 };
 
 
-using NodeName = os::heapless::String<80>;
+using NodeName = senoval::String<80>;
 
 struct HardwareInfo
 {
@@ -120,7 +121,7 @@ namespace impl_
  * (which is typically based on flash memory, which is slow).
  * Image verification can take several seconds, especially if the image is invalid.
  */
-static constexpr unsigned WatchdogTimeoutMillisecond = 5000;
+static constexpr std::chrono::seconds WatchdogTimeout(5);
 
 static constexpr unsigned ServiceRequestTimeoutMillisecond = 1000;
 
@@ -212,7 +213,8 @@ public:
     {
         // Computing increment since last invocation
         const ::systime_t ts = chVTGetSystemTimeX();
-        const std::uint64_t increment_usec = ST2US(::systime_t(ts - prev_sample_at_st_)); // this shall be 64 bit wide!
+        const std::uint64_t increment_usec =
+            TIME_I2US(::systime_t(ts - prev_sample_at_st_)); // this shall be 64 bit wide!
         prev_sample_at_st_ = ts;
         // Add the increment to the absolute time estimate
         base_usec_ += increment_usec;
@@ -266,7 +268,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
     std::uint8_t confirmed_local_node_id_ = 0;          ///< This field is needed in order to avoid mutexes
 
     std::uint8_t remote_server_node_id_ = 0;
-    os::heapless::String<200> firmware_file_path_;
+    senoval::String<200> firmware_file_path_;
 
     os::Logger logger_{"Bootloader.UAVCAN"};
 
@@ -375,9 +377,9 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
         }
     }
 
-    void sendLog(const impl_::LogLevel level, const os::heapless::String<90>& txt)
+    void sendLog(const impl_::LogLevel level, const senoval::String<90>& txt)
     {
-        static const os::heapless::String<31> SourceName("Bootloader");
+        static const senoval::String<31> SourceName("Bootloader");
         std::uint8_t buffer[1 + 31 + 90]{};
         buffer[0] = (std::uint8_t(level) << 5) | SourceName.length();
         std::copy(SourceName.begin(), SourceName.end(), &buffer[1]);
@@ -728,7 +730,8 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             else
             {
                 vendor_specific_status_ = std::abs(result);
-                sendLog(LogLevel::Error, os::heapless::concatenate("Upgrade error ", result));
+                sendLog(LogLevel::Error,
+                        senoval::String<90>("Upgrade error ") + senoval::convertIntToString(result));
             }
 
             /*
@@ -839,7 +842,7 @@ class UAVCANFirmwareUpdateNode : protected ::os::bootloader::IDownloader,
             if (getMonotonicTimestampUSec() > next_progress_report_deadline)
             {
                 next_progress_report_deadline += ProgressReportIntervalMillisecond * 1000;
-                sendLog(LogLevel::Info, os::heapless::concatenate(offset, "B down..."));
+                sendLog(LogLevel::Info, senoval::convertIntToString(offset) + senoval::String<90>("B down..."));
             }
 
             /*
@@ -1227,7 +1230,7 @@ public:
             canardSetLocalNodeID(&canard_, node_id);
         }
 
-        watchdog_.startMSec(impl_::WatchdogTimeoutMillisecond);
+        watchdog_.start(impl_::WatchdogTimeout);
 
         return chibios_rt::BaseStaticThread<StackSize>::start(thread_priority);
     }
