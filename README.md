@@ -3,6 +3,14 @@ ChibiOS libs
 
 [![Join the chat at https://gitter.im/Zubax/general](https://img.shields.io/badge/GITTER-join%20chat-green.svg)](https://gitter.im/Zubax/general)
 
+-----
+
+**WARNING: NOT FOR NEW PROJECTS.
+This repository is being refactored into a set of separate, independent libraries.
+When the refactoring is finished, this repository will be archived and sealed.**
+
+-----
+
 Build system and libraries for ChibiOS-based embedded software.
 
 Basic usage:
