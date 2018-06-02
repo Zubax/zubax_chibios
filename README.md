@@ -5,9 +5,16 @@ ChibiOS libs
 
 -----
 
-**WARNING: NOT FOR NEW PROJECTS.
-This repository is being refactored into a set of separate, independent libraries.
-When the refactoring is finished, this repository will be archived and sealed.**
+**WARNING: NOT FOR NEW PROJECTS!**
+
+**This repository has been refactored into a set of separate, independent libraries:**
+* <https://github.com/Zubax/senoval>
+* <https://github.com/Zubax/legilimens>
+* <https://github.com/Zubax/kocherga>
+* Some of the functionality has been merged into the ChibiOS upstream: <http://www.chibios.com/forum/viewtopic.php?f=35&t=4613>
+
+If your project is dependent on this repository, please refactor it to include ChibiOS directly,
+and feel free to make use of the replacement libraries instead.
 
 -----
 
